@@ -1,35 +1,44 @@
 <script setup lang="ts">
-import RoleTableRow from "./RoleTableRow.vue";
+import PermissionTableRow from "./PermissionTableRow.vue";
+import type { PermissionFilters } from "~/types/access-control/permissions";
 
-const { getRoles } = useRoles();
+const { getPermissions } = usePermissions();
+const { getModules } = useModules();
+
+// Fetch modules for filter dropdown
+const { data: modulesResponse } = getModules();
+const modules = computed(() => modulesResponse.value?.data?.data || []);
 
 const searchQuery = ref("");
+const moduleFilter = ref("");
+const actionFilter = ref("");
 const statusFilter = ref<boolean | "">("");
-const typeFilter = ref<boolean | "">("");
 const currentPage = ref(1);
 const perPage = ref(15);
 
-const filters = computed(() => ({
+const filters = computed<PermissionFilters>(() => ({
     search: searchQuery.value || undefined,
+    module: moduleFilter.value || undefined,
+    action: actionFilter.value || undefined,
     is_active: statusFilter.value !== "" ? statusFilter.value : undefined,
-    is_system: typeFilter.value !== "" ? typeFilter.value : undefined,
     page: currentPage.value,
     per_page: perPage.value,
 }));
 
-// Fetch roles with filters
-const { data: rolesResponse, pending, error } = await useAsyncData(
-    "roles",
+// Fetch permissions with filters
+const { data: permissionsResponse, pending, error } = await useAsyncData(
+    "permissions",
     () => {
         const query = new URLSearchParams();
         if (filters.value.search) query.append("search", filters.value.search);
+        if (filters.value.module) query.append("module", filters.value.module);
+        if (filters.value.action) query.append("action", filters.value.action);
         if (filters.value.is_active !== undefined) query.append("is_active", filters.value.is_active.toString());
-        if (filters.value.is_system !== undefined) query.append("is_system", filters.value.is_system.toString());
         if (filters.value.page) query.append("page", filters.value.page.toString());
         if (filters.value.per_page) query.append("per_page", filters.value.per_page.toString());
 
         const queryString = query.toString();
-        const url = `/access-control/roles${queryString ? `?${queryString}` : ""}`;
+        const url = `/access-control/permissions${queryString ? `?${queryString}` : ""}`;
 
         return $fetch(url, {
             baseURL: useRuntimeConfig().public.apiBase,
@@ -43,16 +52,16 @@ const { data: rolesResponse, pending, error } = await useAsyncData(
     },
 );
 
-const roles = computed(() => rolesResponse.value?.data?.data || []);
+const permissions = computed(() => permissionsResponse.value?.data?.data || []);
 const pagination = computed(() => {
-    if (!rolesResponse.value?.data) return null;
+    if (!permissionsResponse.value?.data) return null;
     return {
-        current_page: rolesResponse.value.data.current_page,
-        last_page: rolesResponse.value.data.last_page,
-        total: rolesResponse.value.data.total,
-        from: rolesResponse.value.data.from,
-        to: rolesResponse.value.data.to,
-        per_page: rolesResponse.value.data.per_page,
+        current_page: permissionsResponse.value.data.current_page,
+        last_page: permissionsResponse.value.data.last_page,
+        total: permissionsResponse.value.data.total,
+        from: permissionsResponse.value.data.from,
+        to: permissionsResponse.value.data.to,
+        per_page: permissionsResponse.value.data.per_page,
     };
 });
 
@@ -72,32 +81,24 @@ const goToPage = (page: number) => {
                                 v-model="searchQuery"
                                 type="search"
                                 class="w-24 sm:w-48"
-                                placeholder="Search roles"
-                                aria-label="Search roles" />
+                                placeholder="Search permissions"
+                                aria-label="Search permissions" />
                         </label>
+                        <div v-if="modules.length > 0" class="hidden sm:block">
+                            <select v-model="moduleFilter" class="select select-sm w-40" aria-label="Module">
+                                <option value="">All Modules</option>
+                                <option v-for="module in modules" :key="module.id" :value="module.name">
+                                    {{ module.display_name }}
+                                </option>
+                            </select>
+                        </div>
                         <div class="hidden sm:block">
-                            <select v-model="statusFilter" class="select select-sm w-40" aria-label="Status">
+                            <select v-model="statusFilter" class="select select-sm w-32" aria-label="Status">
                                 <option value="">All Status</option>
                                 <option :value="true">Active</option>
                                 <option :value="false">Inactive</option>
                             </select>
                         </div>
-                        <div class="hidden sm:block">
-                            <select v-model="typeFilter" class="select select-sm w-40" aria-label="Type">
-                                <option value="">All Types</option>
-                                <option :value="true">System</option>
-                                <option :value="false">Custom</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="inline-flex items-center gap-3">
-                        <NuxtLink
-                            to="/access-control/roles/create"
-                            aria-label="Create role link"
-                            class="btn btn-primary btn-sm max-sm:btn-square">
-                            <span class="iconify lucide--plus size-4" />
-                            <span class="hidden sm:inline">New Role</span>
-                        </NuxtLink>
                     </div>
                 </div>
 
@@ -110,32 +111,41 @@ const goToPage = (page: number) => {
                     <!-- Error State -->
                     <div v-else-if="error" class="alert alert-error m-4">
                         <span class="iconify lucide--alert-circle size-5" />
-                        <span>Failed to load roles. Please try again.</span>
+                        <span>Failed to load permissions. Please try again.</span>
                     </div>
 
                     <!-- Empty State -->
-                    <div v-else-if="roles.length === 0" class="flex flex-col items-center justify-center py-12">
+                    <div
+                        v-else-if="permissions.length === 0"
+                        class="flex flex-col items-center justify-center py-12">
                         <span class="iconify lucide--shield text-base-content/30 mb-4 size-16" />
-                        <p class="text-base-content/60">No roles found</p>
+                        <p class="text-base-content/60">No permissions found</p>
                     </div>
 
                     <!-- Table -->
                     <table v-else class="table">
                         <thead>
                             <tr>
-                                <th>Role Name</th>
                                 <th>Display Name</th>
-                                <th>Description</th>
-                                <th>Priority</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Created At</th>
+                                <th>Name</th>
+                                <th>Module</th>
                                 <th>Action</th>
+                                <th>Status</th>
+                                <th>Description</th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            <RoleTableRow v-for="role in roles" :key="role.id" v-bind="role" />
+                            <PermissionTableRow
+                                v-for="permission in permissions"
+                                :key="permission.id"
+                                :id="permission.id"
+                                :name="permission.name"
+                                :display_name="permission.display_name"
+                                :description="permission.description"
+                                :module="permission.module"
+                                :action="permission.action"
+                                :is_active="permission.is_active" />
                         </tbody>
                     </table>
                 </div>
@@ -181,29 +191,5 @@ const goToPage = (page: number) => {
                 </div>
             </div>
         </div>
-        <dialog id="access-control-role-delete" class="modal">
-            <div class="modal-box">
-                <div class="flex items-center justify-between text-lg font-medium">
-                    Confirm Delete
-                    <form method="dialog">
-                        <button class="btn btn-sm btn-ghost btn-circle" aria-label="Close modal">
-                            <span class="iconify lucide--x size-4" />
-                        </button>
-                    </form>
-                </div>
-                <p class="py-4">You are about to delete this role. Would you like to proceed further ?</p>
-                <div class="modal-action">
-                    <form method="dialog">
-                        <button class="btn btn-ghost btn-sm">No</button>
-                    </form>
-                    <form method="dialog">
-                        <button class="btn btn-sm btn-error">Yes, delete it</button>
-                    </form>
-                </div>
-            </div>
-            <form method="dialog" class="modal-backdrop">
-                <button>close</button>
-            </form>
-        </dialog>
     </div>
 </template>

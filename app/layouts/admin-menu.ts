@@ -97,16 +97,16 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         url: "/access-control/permissions",
     },
     {
-        id: "module",
+        id: "modules",
         icon: "lucide--box",
-        label: "Module",
-        url: "/access-control/module",
+        label: "Modules",
+        url: "/access-control/modules",
     },
     {
-        id: "user-log",
+        id: "user-activity",
         icon: "lucide--file-text",
-        label: "User Log",
-        url: "/access-control/user-log",
+        label: "User activity",
+        url: "/access-control/user-activity",
     },
     {
         id: "setting-label",
