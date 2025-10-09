@@ -1,0 +1,10 @@
+<template>
+    <div class="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <span class="text-base-content/80 text-sm">© 2025 Nexus. All rights reserved</span>
+        <span class="text-base-content/80 flex items-center gap-1 text-sm">
+            Built with
+            <span class="iconify lucide--heart text-red-600" />
+            daisyUI
+        </span>
+    </div>
+</template>

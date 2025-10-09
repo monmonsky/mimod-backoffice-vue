@@ -1,0 +1,5 @@
+<template>
+    <div class="flex w-full items-center justify-center px-4 py-3">
+        <span class="text-base-content/80 text-sm">© 2025 Nexus. All rights reserved.</span>
+    </div>
+</template>
