@@ -100,7 +100,7 @@ definePageMeta({
                             <div>
                                 <h3 class="text-lg font-semibold">Permissions</h3>
                                 <p class="text-base-content/60 text-sm">Permissions assigned to this role</p>
-                                <div class="mt-4 space-y-4">
+                                <div class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     <div
                                         v-for="component in componentsPermissions"
                                         :key="component.name"
@@ -110,11 +110,9 @@ definePageMeta({
                                             <div
                                                 v-for="menu in component.menus"
                                                 :key="menu.name"
-                                                class="flex items-start gap-4">
-                                                <div class="min-w-32">
-                                                    <span class="text-base-content/70 text-sm font-medium">{{ menu.name }}</span>
-                                                </div>
-                                                <div class="flex flex-wrap gap-2">
+                                                class="space-y-2">
+                                                <div class="text-base-content/70 text-sm font-medium">{{ menu.name }}</div>
+                                                <div class="flex flex-wrap gap-2 pl-4">
                                                     <span
                                                         v-for="permission in menu.permissions"
                                                         :key="permission.value"

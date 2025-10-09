@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
-
 import UserTable from "./UserTable.vue";
 
 definePageMeta({

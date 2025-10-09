@@ -1,22 +1,15 @@
 <script lang="ts" setup>
 import PageTitle from "~/components/PageTitle.vue";
 import FileUploader from "~/components/forms/FileUploader.vue";
-import type { User } from "~/types/access-control/users";
 
-const route = useRoute();
 const router = useRouter();
-const userId = Number(route.params.id);
-
-const { getUser, updateUser } = useUsers();
+const { createUser } = useUsers();
 const { getRoles } = useRoles();
-const { data: userResponse, pending, error: fetchError } = getUser(userId);
 const { success, error } = useToast();
 
 // Fetch roles for dropdown
 const { data: rolesResponse } = getRoles();
 const roles = computed(() => rolesResponse.value?.data?.data || []);
-
-const user = computed(() => userResponse.value?.data as User | undefined);
 
 const showPassword = ref(false);
 const saving = ref(false);
@@ -26,50 +19,30 @@ const formData = ref({
     name: "",
     email: "",
     phone: "",
-    role_id: 0,
-    status: "active" as "active" | "inactive",
     password: "",
     password_confirmation: "",
+    role_id: 1,
+    status: "active" as "active" | "suspended" | "deleted",
 });
-
-// Populate form when user data loads
-watch(user, (userData) => {
-    if (userData) {
-        formData.value = {
-            name: userData.name,
-            email: userData.email,
-            phone: userData.phone,
-            role_id: userData.role_id,
-            status: userData.status,
-            password: "",
-            password_confirmation: "",
-        };
-    }
-}, { immediate: true });
 
 const handleSubmit = async () => {
     try {
         saving.value = true;
-        const submitData: any = {
+
+        await createUser({
             name: formData.value.name,
             email: formData.value.email,
             phone: formData.value.phone || undefined,
+            password: formData.value.password,
             role_id: formData.value.role_id,
             status: formData.value.status,
-        };
+        });
 
-        // Only include password if provided
-        if (formData.value.password) {
-            submitData.password = formData.value.password;
-            submitData.password_confirmation = formData.value.password_confirmation;
-        }
-
-        await updateUser(userId, submitData);
-        success("User updated successfully!");
+        success("User created successfully!");
         router.push("/access-control/users");
     } catch (err: any) {
-        console.error("Failed to update user:", err);
-        const errorMessage = err?.data?.message || "Failed to update user";
+        console.error("Failed to create user:", err);
+        const errorMessage = err?.data?.message || "Failed to create user";
         error(errorMessage);
     } finally {
         saving.value = false;
@@ -87,31 +60,12 @@ definePageMeta({
             :items="[
                 { label: 'Access Control' },
                 { label: 'Users', path: '/access-control/users' },
-                { label: 'Edit', active: true },
+                { label: 'Create', active: true },
             ]"
-            title="Edit User" />
-
-        <!-- Loading State -->
-        <div v-if="pending" class="mt-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body py-12 text-center">
-                    <span class="loading loading-spinner loading-lg"></span>
-                    <p class="text-base-content/60 mt-4">Loading user data...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="fetchError" class="mt-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body py-8 text-center">
-                    <p class="text-error">Failed to load user data</p>
-                </div>
-            </div>
-        </div>
+            title="Create New User" />
 
         <!-- Form -->
-        <form v-else-if="user" class="mt-6" @submit.prevent="handleSubmit">
+        <form class="mt-6" @submit.prevent="handleSubmit">
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <!-- Basic Information -->
                 <div class="card bg-base-100 shadow">
@@ -119,7 +73,9 @@ definePageMeta({
                         <div class="card-title">Basic Information</div>
                         <div class="fieldset mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
                             <div class="space-y-2">
-                                <label class="fieldset-label" for="name">Full Name</label>
+                                <label class="fieldset-label" for="name">
+                                    Full Name <span class="text-error">*</span>
+                                </label>
                                 <input
                                     id="name"
                                     v-model="formData.name"
@@ -129,7 +85,9 @@ definePageMeta({
                                     required />
                             </div>
                             <div class="space-y-2">
-                                <label class="fieldset-label" for="email">Email</label>
+                                <label class="fieldset-label" for="email">
+                                    Email <span class="text-error">*</span>
+                                </label>
                                 <input
                                     id="email"
                                     v-model="formData.email"
@@ -145,10 +103,13 @@ definePageMeta({
                                     v-model="formData.phone"
                                     type="text"
                                     class="input w-full"
-                                    placeholder="Phone Number" />
+                                    placeholder="Phone Number"
+                                    maxlength="20" />
                             </div>
                             <div class="space-y-2">
-                                <label class="fieldset-label" for="role">Role</label>
+                                <label class="fieldset-label" for="role">
+                                    Role <span class="text-error">*</span>
+                                </label>
                                 <select id="role" v-model.number="formData.role_id" class="select w-full" required>
                                     <template v-if="roles.length > 0">
                                         <option v-for="role in roles" :key="role.id" :value="role.id">
@@ -159,15 +120,13 @@ definePageMeta({
                                 </select>
                             </div>
                             <div class="space-y-2">
-                                <label class="fieldset-label" for="status">Status</label>
+                                <label class="fieldset-label" for="status">
+                                    Status <span class="text-error">*</span>
+                                </label>
                                 <select id="status" v-model="formData.status" class="select w-full" required>
                                     <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
+                                    <option value="inactive">inactive</option>
                                 </select>
-                            </div>
-                            <div class="space-y-2">
-                                <label class="fieldset-label">Last Login</label>
-                                <p class="text-base-content/60 text-sm">{{ user.last_login_at || '-' }}</p>
                             </div>
                         </div>
                     </div>
@@ -178,37 +137,35 @@ definePageMeta({
                     <div class="card-body">
                         <div class="card-title">Profile Photo</div>
                         <div class="mt-2">
-                            <div class="mb-4 flex items-center gap-4">
-                                <img
-                                    :src="user.photo || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name)"
-                                    alt="User avatar"
-                                    class="mask mask-squircle size-20" />
-                                <div>
-                                    <p class="text-base-content/60 text-sm">Current Photo</p>
-                                </div>
-                            </div>
                             <FileUploader
                                 label-idle="<div>Drag and Drop your image or <span style='text-decoration: underline'>Browse</span></div>" />
+                            <p class="text-base-content/60 mt-2 text-xs">
+                                Recommended: Square image, at least 400x400px
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Change Password -->
+                <!-- Password -->
                 <div class="card bg-base-100 shadow md:col-span-2">
                     <div class="card-body gap-0">
-                        <div class="card-title">Change Password</div>
-                        <p class="text-base-content/60 mb-4 text-sm">Leave blank if you don't want to change the password</p>
+                        <div class="card-title">Password</div>
+                        <p class="text-base-content/60 mb-4 text-sm">Password must be at least 8 characters</p>
                         <div class="fieldset grid grid-cols-1 gap-5 gap-y-3 lg:grid-cols-2">
                             <div class="space-y-2">
-                                <label class="fieldset-label" for="new-password">New Password</label>
+                                <label class="fieldset-label" for="password">
+                                    Password <span class="text-error">*</span>
+                                </label>
                                 <label class="input w-full focus:outline-0">
                                     <span class="iconify lucide--key-round text-base-content/60 size-4" />
                                     <input
-                                        id="new-password"
+                                        id="password"
                                         v-model="formData.password"
                                         class="grow focus:outline-0"
-                                        placeholder="New Password"
-                                        :type="showPassword ? 'text' : 'password'" />
+                                        placeholder="Password"
+                                        minlength="8"
+                                        :type="showPassword ? 'text' : 'password'"
+                                        required />
                                     <button
                                         aria-label="Toggle password"
                                         type="button"
@@ -220,7 +177,9 @@ definePageMeta({
                                 </label>
                             </div>
                             <div class="space-y-2">
-                                <label class="fieldset-label" for="confirm-password">Confirm Password</label>
+                                <label class="fieldset-label" for="confirm-password">
+                                    Confirm Password <span class="text-error">*</span>
+                                </label>
                                 <label class="input w-full focus:outline-0">
                                     <span class="iconify lucide--key-round text-base-content/60 size-4" />
                                     <input
@@ -228,7 +187,9 @@ definePageMeta({
                                         v-model="formData.password_confirmation"
                                         class="grow focus:outline-0"
                                         placeholder="Confirm Password"
-                                        :type="showPassword ? 'text' : 'password'" />
+                                        minlength="8"
+                                        :type="showPassword ? 'text' : 'password'"
+                                        required />
                                     <button
                                         aria-label="Toggle password"
                                         type="button"
@@ -252,19 +213,10 @@ definePageMeta({
                 </NuxtLink>
                 <button type="submit" class="btn btn-sm btn-primary" :disabled="saving">
                     <span v-if="saving" class="loading loading-spinner loading-xs"></span>
-                    <span v-else class="iconify lucide--arrow-up-from-line size-4" />
-                    {{ saving ? 'Updating...' : 'Update' }}
+                    <span v-else class="iconify lucide--plus size-4" />
+                    {{ saving ? 'Creating...' : 'Create User' }}
                 </button>
             </div>
         </form>
-
-        <!-- Not Found -->
-        <div v-else class="mt-6">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body py-8 text-center">
-                    <p class="text-base-content/60">User not found</p>
-                </div>
-            </div>
-        </div>
     </div>
 </template>

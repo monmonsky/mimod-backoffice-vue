@@ -1,25 +1,78 @@
 <script setup lang="ts">
 import UserTableRow from "./UserTableRow.vue";
-import { usersData } from "./data";
+import type { UserFilters } from "~/types/access-control/users";
+
+const { getUsers } = useUsers();
+const { getRoles } = useRoles();
+
+// Fetch roles for filter dropdown
+const { data: rolesResponse } = getRoles();
+const roles = computed(() => {
+    if (!rolesResponse.value?.data) return [];
+    return rolesResponse.value.data.data;
+});
 
 const searchQuery = ref("");
-const statusFilter = ref("");
-const roleFilter = ref("");
+const statusFilter = ref<"" | "active" | "suspended" | "deleted">("");
+const roleFilter = ref<number | "">("");
+const currentPage = ref(1);
+const perPage = ref(15);
 
-const filteredUsers = computed(() => {
-    return usersData.filter((user) => {
-        const matchesSearch =
-            searchQuery.value === "" ||
-            user.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.value.toLowerCase());
+const filters = computed<UserFilters>(() => ({
+    search: searchQuery.value || undefined,
+    status: statusFilter.value || undefined,
+    role_id: roleFilter.value || undefined,
+    page: currentPage.value,
+    per_page: perPage.value,
+}));
 
-        const matchesStatus = statusFilter.value === "" || user.status.toLowerCase() === statusFilter.value.toLowerCase();
+// Use computed filters directly
+const { data: usersResponse, pending, error } = await useAsyncData(
+    "users",
+    () => {
+        const query = new URLSearchParams();
+        if (filters.value.search) query.append("search", filters.value.search);
+        if (filters.value.status) query.append("status", filters.value.status);
+        if (filters.value.role_id) query.append("role_id", filters.value.role_id.toString());
+        if (filters.value.page) query.append("page", filters.value.page.toString());
+        if (filters.value.per_page) query.append("per_page", filters.value.per_page.toString());
 
-        const matchesRole = roleFilter.value === "" || user.role === roleFilter.value;
+        const queryString = query.toString();
+        const url = `/access-control/users${queryString ? `?${queryString}` : ""}`;
 
-        return matchesSearch && matchesStatus && matchesRole;
-    });
+        return $fetch(url, {
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+        });
+    },
+    {
+        watch: [filters],
+    },
+);
+
+const users = computed(() => usersResponse.value?.data?.data || []);
+const pagination = computed(() => {
+    if (!usersResponse.value?.data) return null;
+    return {
+        current_page: usersResponse.value.data.current_page,
+        last_page: usersResponse.value.data.last_page,
+        total: usersResponse.value.data.total,
+        from: usersResponse.value.data.from,
+        to: usersResponse.value.data.to,
+        per_page: usersResponse.value.data.per_page,
+    };
 });
+
+const goToPage = (page: number) => {
+    currentPage.value = page;
+};
+
+const handleRefresh = () => {
+    // Trigger re-fetch by changing a filter value slightly
+    currentPage.value = currentPage.value;
+};
 </script>
 <template>
     <div>
@@ -40,16 +93,18 @@ const filteredUsers = computed(() => {
                             <select v-model="statusFilter" class="select select-sm w-40" aria-label="Status">
                                 <option value="">All Status</option>
                                 <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="suspended">Suspended</option>
+                                <option value="deleted">Deleted</option>
                             </select>
                         </div>
                         <div class="hidden sm:block">
-                            <select v-model="roleFilter" class="select select-sm w-40" aria-label="Role">
+                            <select v-model.number="roleFilter" class="select select-sm w-40" aria-label="Role">
                                 <option value="">All Roles</option>
-                                <option value="Super Admin">Super Admin</option>
-                                <option value="Admin">Admin</option>
-                                <option value="Manager">Manager</option>
-                                <option value="Staff">Staff</option>
+                                <template v-if="roles.length > 0">
+                                    <option v-for="role in roles" :key="role.id" :value="role.id">
+                                        {{ role.display_name }}
+                                    </option>
+                                </template>
                             </select>
                         </div>
                     </div>
@@ -99,7 +154,25 @@ const filteredUsers = computed(() => {
                 </div>
 
                 <div class="mt-4 overflow-auto">
-                    <table class="table">
+                    <!-- Loading State -->
+                    <div v-if="pending" class="flex items-center justify-center py-12">
+                        <span class="loading loading-spinner loading-lg"></span>
+                    </div>
+
+                    <!-- Error State -->
+                    <div v-else-if="error" class="alert alert-error m-4">
+                        <span class="iconify lucide--alert-circle size-5" />
+                        <span>Failed to load users. Please try again.</span>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-else-if="users.length === 0" class="flex flex-col items-center justify-center py-12">
+                        <span class="iconify lucide--users text-base-content/30 mb-4 size-16" />
+                        <p class="text-base-content/60">No users found</p>
+                    </div>
+
+                    <!-- Table -->
+                    <table v-else class="table">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -113,62 +186,62 @@ const filteredUsers = computed(() => {
 
                         <tbody>
                             <UserTableRow
-                                v-for="(user, index) in filteredUsers"
-                                :key="index"
-                                v-bind="user" />
+                                v-for="user in users"
+                                :key="user.id"
+                                :id="user.id"
+                                :name="user.name"
+                                :email="user.email"
+                                :image="`/images/avatars/${(user.id % 10) + 1}.png`"
+                                :role="user.role_display_name || user.role_name || 'N/A'"
+                                :status="user.status"
+                                :last-login="user.last_login_at || 'Never'"
+                                @refresh="handleRefresh" />
                         </tbody>
                     </table>
                 </div>
-                <div class="flex items-center justify-between p-6">
+                <div v-if="pagination" class="flex items-center justify-between p-6">
                     <div class="text-base-content/80 hover:text-base-content flex gap-2 text-sm">
                         <span class="hidden sm:inline">Per page</span>
-                        <select class="select select-xs w-18" aria-label="Per page">
-                            <option value="10">10</option>
-                            <option value="20">20</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
+                        <select v-model="perPage" class="select select-xs w-18" aria-label="Per page">
+                            <option :value="10">10</option>
+                            <option :value="15">15</option>
+                            <option :value="20">20</option>
+                            <option :value="50">50</option>
                         </select>
                     </div>
                     <span class="text-base-content/80 hidden text-sm lg:inline">
-                        Showing <span class="text-base-content font-medium">1 to {{ filteredUsers.length }}</span> of {{ filteredUsers.length }} items
+                        Showing
+                        <span class="text-base-content font-medium">{{ pagination.from }} to {{ pagination.to }}</span>
+                        of {{ pagination.total }} items
                     </span>
                     <div class="inline-flex items-center gap-1">
-                        <button class="btn btn-circle sm:btn-sm btn-xs btn-ghost" aria-label="Prev">
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Prev"
+                            :disabled="pagination.current_page === 1"
+                            @click="goToPage(pagination.current_page - 1)">
                             <span class="iconify lucide--chevron-left" />
                         </button>
-                        <button class="btn btn-primary btn-circle sm:btn-sm btn-xs">1</button>
-                        <button class="btn btn-ghost btn-circle sm:btn-sm btn-xs">2</button>
-                        <button class="btn btn-ghost btn-circle sm:btn-sm btn-xs">3</button>
-                        <button class="btn btn-circle sm:btn-sm btn-xs btn-ghost" aria-label="Next">
+                        <button
+                            v-for="page in Math.min(pagination.last_page, 5)"
+                            :key="page"
+                            :class="[
+                                'btn btn-circle sm:btn-sm btn-xs',
+                                page === pagination.current_page ? 'btn-primary' : 'btn-ghost',
+                            ]"
+                            @click="goToPage(page)">
+                            {{ page }}
+                        </button>
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Next"
+                            :disabled="pagination.current_page === pagination.last_page"
+                            @click="goToPage(pagination.current_page + 1)">
                             <span class="iconify lucide--chevron-right" />
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-        <dialog id="access-control-user-delete" class="modal">
-            <div class="modal-box">
-                <div class="flex items-center justify-between text-lg font-medium">
-                    Confirm Delete
-                    <form method="dialog">
-                        <button class="btn btn-sm btn-ghost btn-circle" aria-label="Close modal">
-                            <span class="iconify lucide--x size-4" />
-                        </button>
-                    </form>
-                </div>
-                <p class="py-4">You are about to delete this user. Would you like to proceed further ?</p>
-                <div class="modal-action">
-                    <form method="dialog">
-                        <button class="btn btn-ghost btn-sm">No</button>
-                    </form>
-                    <form method="dialog">
-                        <button class="btn btn-sm btn-error">Yes, delete it</button>
-                    </form>
-                </div>
-            </div>
-            <form method="dialog" class="modal-backdrop">
-                <button>close</button>
-            </form>
-        </dialog>
     </div>
 </template>
