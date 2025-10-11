@@ -11,6 +11,13 @@ import { getActivatedItemParentKeys } from "./helpers";
 
 const route = useRoute();
 const { config } = storeToRefs(useConfig());
+const authStore = useAuthStore();
+const { success } = useToast();
+
+const handleLogout = async () => {
+    await authStore.logout();
+    success("Logged out successfully");
+};
 
 const props = defineProps<{
     menuItems: ISidebarMenuItem[];
@@ -105,35 +112,34 @@ onMounted(() => {
                         </div>
                     </div>
                     <div class="grow -space-y-0.5">
-                        <p class="text-sm font-medium">Denish N</p>
-                        <p class="text-base-content/60 text-xs">@withden</p>
+                        <p class="text-sm font-medium">{{ authStore.user?.name || 'User' }}</p>
+                        <p class="text-base-content/60 text-xs">{{ authStore.user?.role_display_name || 'Member' }}</p>
                     </div>
                     <span class="iconify lucide--chevrons-up-down text-base-content/60 size-4" />
                 </div>
                 <ul
                     role="menu"
                     tabindex="0"
-                    class="dropdown-content menu bg-base-100 rounded-box shadow-base-content/4 mb-1 w-48 p-1 shadow-[0px_-10px_40px_0px]">
+                    class="dropdown-content menu bg-base-100 rounded-box shadow-base-content/4 mb-1 w-52 p-1 shadow-[0px_-10px_40px_0px]">
                     <li>
-                        <NuxtLink href="/pages/settings">
-                            <span class="iconify lucide--user size-4" /><span>My Profile</span>
+                        <NuxtLink to="/dashboards">
+                            <span class="iconify lucide--monitor-dot size-4" /><span>Dashboard</span>
                         </NuxtLink>
                     </li>
                     <li>
-                        <NuxtLink href="/pages/settings">
+                        <NuxtLink to="/settings">
                             <span class="iconify lucide--settings size-4" /><span>Settings</span>
                         </NuxtLink>
                     </li>
                     <li>
-                        <NuxtLink href="/pages/get-help">
-                            <span class="iconify lucide--help-circle size-4" /><span>Help</span>
+                        <NuxtLink to="/access-control/user-activity">
+                            <span class="iconify lucide--activity size-4" /><span>Activity Log</span>
                         </NuxtLink>
                     </li>
                     <li>
-                        <div><span class="iconify lucide--bell size-4" /><span>Notification</span></div>
-                    </li>
-                    <li>
-                        <div><span class="iconify lucide--arrow-left-right size-4" /><span>Switch Account</span></div>
+                        <button @click="handleLogout" class="text-error hover:bg-error/10">
+                            <span class="iconify lucide--log-out size-4" /><span>Sign Out</span>
+                        </button>
                     </li>
                 </ul>
             </div>

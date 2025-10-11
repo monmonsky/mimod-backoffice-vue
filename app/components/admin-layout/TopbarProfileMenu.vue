@@ -50,67 +50,32 @@ const handleLogout = async () => {
 
                             <p class="mt-4 text-lg/none font-medium sm:mt-8">{{ authStore.user?.name || 'User' }}</p>
                             <p class="text-base-content/60 mt-1 text-sm">{{ authStore.user?.email || '' }}</p>
-
-                            <div class="mt-4 flex items-center gap-2 *:cursor-pointer sm:mt-6">
-                                <div class="avatar bg-base-200 size-10 overflow-hidden rounded-full px-1 pt-1">
-                                    <img src="/images/avatars/2.png" alt="Team member" />
-                                </div>
-                                <div class="avatar bg-base-200 size-10 overflow-hidden rounded-full px-1 pt-1">
-                                    <img src="/images/avatars/3.png" alt="Team member" />
-                                </div>
-                                <div class="avatar bg-base-200 size-10 overflow-hidden rounded-full px-1 pt-1">
-                                    <img src="/images/avatars/4.png" alt="Team member" />
-                                </div>
-                                <div
-                                    class="bg-base-200 border-base-300 flex size-10 items-center justify-center rounded-full border border-dashed">
-                                    <span class="iconify lucide--plus size-4.5" />
-                                </div>
-                            </div>
+                            <div class="badge badge-outline mt-2">{{ authStore.user?.role_display_name || 'Member' }}</div>
                         </div>
 
                         <div class="border-base-300 mt-4 grow overflow-auto border-t border-dashed px-2 sm:mt-6">
                             <ul class="menu w-full p-2">
-                                <li class="menu-title">Account</li>
+                                <li class="menu-title">Quick Links</li>
                                 <li>
-                                    <NuxtLink href="#">
-                                        <span class="iconify lucide--user size-4.5" />
-                                        <span>View Profile</span>
+                                    <NuxtLink to="/dashboards">
+                                        <span class="iconify lucide--monitor-dot size-4.5" />
+                                        <span>Dashboard</span>
                                     </NuxtLink>
                                 </li>
                                 <li>
-                                    <NuxtLink href="#">
-                                        <span class="iconify lucide--users size-4.5" />
-                                        <span>Team</span>
-                                    </NuxtLink>
-                                </li>
-                                <li>
-                                    <NuxtLink href="#">
-                                        <span class="iconify lucide--mail-plus size-4.5" />
-                                        <span>Invites</span>
-                                        <div class="badge badge-sm">4</div>
-                                    </NuxtLink>
-                                </li>
-
-                                <li class="menu-title">Platform</li>
-                                <li>
-                                    <NuxtLink href="#">
+                                    <NuxtLink to="/settings">
                                         <span class="iconify lucide--settings size-4.5" />
                                         <span>Settings</span>
                                     </NuxtLink>
                                 </li>
                                 <li>
-                                    <NuxtLink href="#">
-                                        <span class="iconify lucide--credit-card size-4.5" />
-                                        <span>Billing</span>
-                                    </NuxtLink>
-                                </li>
-                                <li>
-                                    <NuxtLink href="#">
-                                        <span class="iconify lucide--help-circle size-4.5" />
-                                        <span>Support</span>
+                                    <NuxtLink to="/access-control/user-activity">
+                                        <span class="iconify lucide--activity size-4.5" />
+                                        <span>Activity Log</span>
                                     </NuxtLink>
                                 </li>
 
+                                <li class="menu-title mt-4">Account</li>
                                 <li>
                                     <button @click="handleLogout" class="text-error hover:bg-error/10">
                                         <span class="iconify lucide--log-out size-4.5" />
@@ -118,21 +83,6 @@ const handleLogout = async () => {
                                     </button>
                                 </li>
                             </ul>
-                        </div>
-
-                        <div
-                            class="rounded-box from-primary to-secondary text-primary-content m-4 mt-auto flex cursor-pointer flex-col items-center justify-center bg-linear-to-br p-4 text-center transition-all hover:opacity-95 sm:p-6">
-                            <div
-                                class="bg-primary-content/10 border-primary-content/10 flex items-center justify-center rounded-full border p-1.5 sm:p-2.5">
-                                <span class="iconify lucide--zap size-5 sm:size-6" />
-                            </div>
-                            <p
-                                class="mt-2 font-mono text-[11px] font-medium tracking-wider uppercase opacity-70 sm:mt-4">
-                                Upgrade your plan
-                            </p>
-                            <p class="mt-1 leading-none font-medium sm:text-lg">
-                                Save <span class="font-semibold underline">30%</span> today
-                            </p>
                         </div>
                     </div>
                 </div>
