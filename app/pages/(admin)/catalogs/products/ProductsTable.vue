@@ -299,7 +299,9 @@ const getPrimaryImage = (images: any[]) => {
                                     <span class="text-sm">{{ product.age_min }} - {{ product.age_max }} years</span>
                                 </td>
                                 <td>
-                                    <span class="badge badge-sm badge-info">{{ product.total_variants || 0 }}</span>
+                                    <span class="badge badge-sm badge-info">
+                                        {{ product.total_variants || product.variants?.length || 0 }}
+                                    </span>
                                 </td>
                                 <td>
                                     <span class="badge badge-sm" :class="getStatusClass(product.status)">

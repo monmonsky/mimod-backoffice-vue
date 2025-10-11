@@ -490,8 +490,7 @@ const formatPrice = (price: string | number) => {
                                 v-model="form.sku"
                                 type="text"
                                 class="input input-sm w-full"
-                                placeholder="e.g., PRD-001-S-BLK"
-                                required />
+                                placeholder="e.g., PRD-001-S-BLK" />
                         </div>
                         <div class="space-y-2">
                             <label class="fieldset-label" for="barcode">Barcode</label>
@@ -515,8 +514,7 @@ const formatPrice = (price: string | number) => {
                                 v-model="form.size"
                                 type="text"
                                 class="input input-sm w-full"
-                                placeholder="e.g., 5-6 Tahun"
-                                required />
+                                placeholder="e.g., 5-6 Tahun" />
                         </div>
                         <div class="space-y-2">
                             <label class="fieldset-label" for="color">
@@ -527,8 +525,7 @@ const formatPrice = (price: string | number) => {
                                 v-model="form.color"
                                 type="text"
                                 class="input input-sm w-full"
-                                placeholder="e.g., Cream, Light Blue"
-                                required />
+                                placeholder="e.g., Cream, Light Blue" />
                         </div>
                     </div>
 
@@ -546,8 +543,7 @@ const formatPrice = (price: string | number) => {
                                     type="number"
                                     step="0.01"
                                     class="grow"
-                                    placeholder="0"
-                                    required />
+                                    placeholder="0" />
                             </label>
                         </div>
                         <div class="space-y-2">

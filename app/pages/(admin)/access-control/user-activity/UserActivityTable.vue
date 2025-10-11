@@ -193,38 +193,46 @@ const formatDate = (dateString: string) => {
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="activities.length > 0" class="border-t border-base-300 p-5">
-                    <div class="flex items-center justify-between">
-                        <div class="text-base-content/60 text-sm">
-                            Showing
-                            <span class="text-base-content font-medium">
-                                {{ (pagination.current_page - 1) * pagination.per_page + 1 }}
-                            </span>
-                            to
-                            <span class="text-base-content font-medium">
-                                {{ Math.min(pagination.current_page * pagination.per_page, pagination.total) }}
-                            </span>
-                            of
-                            <span class="text-base-content font-medium">{{ pagination.total }}</span>
-                            results
-                        </div>
-                        <div class="join">
-                            <button
-                                class="btn btn-sm join-item"
-                                :disabled="pagination.current_page === 1"
-                                @click="goToPage(pagination.current_page - 1)">
-                                <span class="iconify lucide--chevron-left size-4" />
-                            </button>
-                            <button class="btn btn-sm join-item">
-                                Page {{ pagination.current_page }} of {{ pagination.last_page }}
-                            </button>
-                            <button
-                                class="btn btn-sm join-item"
-                                :disabled="pagination.current_page === pagination.last_page"
-                                @click="goToPage(pagination.current_page + 1)">
-                                <span class="iconify lucide--chevron-right size-4" />
-                            </button>
-                        </div>
+                <div v-if="pagination" class="flex items-center justify-between p-6">
+                    <div class="text-base-content/80 hover:text-base-content flex gap-2 text-sm">
+                        <span class="hidden sm:inline">Per page</span>
+                        <select v-model="per_page" class="select select-xs w-18" aria-label="Per page">
+                            <option :value="10">10</option>
+                            <option :value="20">20</option>
+                            <option :value="50">50</option>
+                            <option :value="100">100</option>
+                        </select>
+                    </div>
+                    <span class="text-base-content/80 hidden text-sm lg:inline">
+                        Showing
+                        <span class="text-base-content font-medium">{{ pagination.from }} to {{ pagination.to }}</span>
+                        of {{ pagination.total }} items
+                    </span>
+                    <div class="inline-flex items-center gap-1">
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Prev"
+                            :disabled="pagination.current_page === 1"
+                            @click="goToPage(pagination.current_page - 1)">
+                            <span class="iconify lucide--chevron-left" />
+                        </button>
+                        <button
+                            v-for="pageNum in Math.min(pagination.last_page, 5)"
+                            :key="pageNum"
+                            :class="[
+                                'btn btn-circle sm:btn-sm btn-xs',
+                                pageNum === pagination.current_page ? 'btn-primary' : 'btn-ghost',
+                            ]"
+                            @click="goToPage(pageNum)">
+                            {{ pageNum }}
+                        </button>
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Next"
+                            :disabled="pagination.current_page === pagination.last_page"
+                            @click="goToPage(pagination.current_page + 1)">
+                            <span class="iconify lucide--chevron-right" />
+                        </button>
                     </div>
                 </div>
             </div>

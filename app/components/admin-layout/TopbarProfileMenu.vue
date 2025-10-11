@@ -1,4 +1,12 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+const authStore = useAuthStore();
+const { success } = useToast();
+
+const handleLogout = async () => {
+    await authStore.logout();
+    success("Logged out successfully");
+};
+</script>
 
 <template>
     <div>
@@ -12,8 +20,8 @@
                         </div>
                     </div>
                     <div class="text-start max-sm:hidden">
-                        <p class="text-sm/none">Denish</p>
-                        <p class="text-base-content/50 mt-0.5 text-xs/none">Team</p>
+                        <p class="text-sm/none">{{ authStore.user?.name || 'User' }}</p>
+                        <p class="text-base-content/50 mt-0.5 text-xs/none">{{ authStore.user?.role_display_name || 'Member' }}</p>
                     </div>
                 </label>
             </div>
@@ -40,8 +48,8 @@
                                 </div>
                             </div>
 
-                            <p class="mt-4 text-lg/none font-medium sm:mt-8">John Doe</p>
-                            <p class="text-base-content/60 mt-1 text-sm">john@company.com</p>
+                            <p class="mt-4 text-lg/none font-medium sm:mt-8">{{ authStore.user?.name || 'User' }}</p>
+                            <p class="text-base-content/60 mt-1 text-sm">{{ authStore.user?.email || '' }}</p>
 
                             <div class="mt-4 flex items-center gap-2 *:cursor-pointer sm:mt-6">
                                 <div class="avatar bg-base-200 size-10 overflow-hidden rounded-full px-1 pt-1">
@@ -104,10 +112,10 @@
                                 </li>
 
                                 <li>
-                                    <NuxtLink class="text-error hover:bg-error/10" href="#">
+                                    <button @click="handleLogout" class="text-error hover:bg-error/10">
                                         <span class="iconify lucide--log-out size-4.5" />
                                         <span>Sign Out</span>
-                                    </NuxtLink>
+                                    </button>
                                 </li>
                             </ul>
                         </div>
