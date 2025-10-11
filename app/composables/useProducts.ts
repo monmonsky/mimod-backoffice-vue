@@ -4,15 +4,20 @@ export const useProducts = () => {
     const config = useRuntimeConfig();
     const authStore = useAuthStore();
 
-    const getProducts = (params?: Record<string, any>) => {
-        return useAsyncData<ProductsListResponse>("products", () =>
-            $fetch("/catalog/products", {
-                baseURL: config.public.apiBase,
-                headers: {
-                    Authorization: `Bearer ${authStore.token}`,
-                },
-                params,
-            }),
+    const getProducts = (params?: Record<string, any>, options?: { watch?: any[] }) => {
+        return useAsyncData<ProductsListResponse>(
+            "products",
+            () =>
+                $fetch("/catalog/products", {
+                    baseURL: config.public.apiBase,
+                    headers: {
+                        Authorization: `Bearer ${authStore.token}`,
+                    },
+                    params,
+                }),
+            {
+                watch: options?.watch || [],
+            },
         );
     };
 

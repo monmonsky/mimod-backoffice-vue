@@ -54,7 +54,7 @@ const handleLogin = async () => {
             success("Login successful!");
 
             // Redirect to dashboard
-            await router.push("/");
+            await router.push("/dashboards");
         } else {
             showError(data.message || "Login failed");
         }

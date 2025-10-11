@@ -10,7 +10,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "dashboard",
         icon: "lucide--monitor-dot",
         label: "Dashboard",
-        url: "/dashboards/ecommerce",
+        url: "/dashboards",
     },
     {
         id: "orders-label",
@@ -115,15 +115,21 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         url: "/access-control/user-activity",
     },
     {
+        id: "store-tokens",
+        icon: "lucide--key",
+        label: "Store Tokens",
+        url: "/access-control/store-tokens",
+    },
+    {
         id: "setting-label",
         isTitle: true,
         label: "Setting",
     },
     {
-        id: "general",
+        id: "settings",
         icon: "lucide--settings",
-        label: "General",
-        url: "/settings/general",
+        label: "Settings",
+        url: "/settings",
     },
     {
         id: "payments",

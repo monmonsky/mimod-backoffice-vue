@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { deleteProduct } = useProducts();
+const { getProducts, deleteProduct } = useProducts();
 const { success, error: showError } = useToast();
 
 // Filters
@@ -20,22 +20,10 @@ const params = computed(() => ({
     ...(featured.value && { is_featured: featured.value }),
 }));
 
-// Fetch products - reactively watch params
-const { data: productsResponse, pending, refresh } = await useAsyncData(
-    "products",
-    () => {
-        return $fetch("/catalog/products", {
-            baseURL: useRuntimeConfig().public.apiBase,
-            headers: {
-                Authorization: `Bearer ${useAuthStore().token}`,
-            },
-            params: params.value,
-        });
-    },
-    {
-        watch: [params],
-    },
-);
+// Fetch products using composable - reactively watch params
+const { data: productsResponse, pending, refresh } = await getProducts(params.value, {
+    watch: [params],
+});
 
 const products = computed(() => {
     const response = productsResponse.value as any;

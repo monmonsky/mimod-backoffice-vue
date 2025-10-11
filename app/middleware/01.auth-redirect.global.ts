@@ -13,7 +13,7 @@ export default defineNuxtRouteMiddleware((to, from) => {
 
     // If authenticated and trying to access "/", redirect to admin dashboard
     if (to.path === "/" && authStore.isAuthenticated) {
-        return navigateTo("/catalogs/products");
+        return navigateTo("/dashboards");
     }
 
     // Protect all admin routes (any route not starting with /auth/)
