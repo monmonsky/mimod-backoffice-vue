@@ -16,26 +16,34 @@ const props = defineProps<IPageTitle>();
 
 <template>
     <div class="flex items-center justify-between">
-        <p class="text-lg font-medium">{{ props.title }}</p>
+        <div class="flex items-center gap-4">
+            <p class="text-lg font-medium">{{ props.title }}</p>
 
-        <div v-if="$slots.centerItem">
-            <slot name="centerItem" />
+            <div v-if="$slots.centerItem">
+                <slot name="centerItem" />
+            </div>
         </div>
 
-        <div v-if="props.items" class="breadcrumbs hidden p-0 text-sm sm:inline">
-            <ul>
-                <li>
-                    <NuxtLink href="/dashboards/ecommerce">Nexus</NuxtLink>
-                </li>
-                <li v-for="(item, index) in props.items" :key="index" :class="{ 'opacity-80': item.active }">
-                    <template v-if="item.path">
-                        <NuxtLink :href="item.path">{{ item.label }}</NuxtLink>
-                    </template>
-                    <template v-else>
-                        {{ item.label }}
-                    </template>
-                </li>
-            </ul>
+        <div class="flex items-center gap-4">
+            <div v-if="$slots.actions">
+                <slot name="actions" />
+            </div>
+
+            <div v-if="props.items" class="breadcrumbs hidden p-0 text-sm sm:inline">
+                <ul>
+                    <li>
+                        <NuxtLink href="/dashboards/ecommerce">Nexus</NuxtLink>
+                    </li>
+                    <li v-for="(item, index) in props.items" :key="index" :class="{ 'opacity-80': item.active }">
+                        <template v-if="item.path">
+                            <NuxtLink :href="item.path">{{ item.label }}</NuxtLink>
+                        </template>
+                        <template v-else>
+                            {{ item.label }}
+                        </template>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </template>

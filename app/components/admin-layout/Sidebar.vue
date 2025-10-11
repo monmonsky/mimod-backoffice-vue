@@ -93,22 +93,6 @@ onMounted(() => {
         </div>
 
         <div class="mb-2">
-            <NuxtLink target="_blank" class="group rounded-box relative mx-2.5 block gap-3" href="/components">
-                <div
-                    class="rounded-box absolute inset-0 bg-gradient-to-r from-transparent to-transparent transition-opacity duration-300 group-hover:opacity-0" />
-                <div
-                    class="from-primary to-secondary rounded-box absolute inset-0 bg-gradient-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                <div class="relative flex h-10 items-center gap-3 px-3">
-                    <i
-                        class="iconify lucide--shapes text-primary size-4.5 transition-all duration-300 group-hover:text-white" />
-                    <p
-                        class="from-primary to-secondary bg-gradient-to-r bg-clip-text font-medium text-transparent transition-all duration-300 group-hover:text-white">
-                        Components
-                    </p>
-                    <i
-                        class="iconify lucide--chevron-right text-secondary ms-auto size-4.5 transition-all duration-300 group-hover:text-white" />
-                </div>
-            </NuxtLink>
             <hr class="border-base-300 my-2 border-dashed" />
             <div class="dropdown dropdown-top dropdown-end w-full">
                 <div

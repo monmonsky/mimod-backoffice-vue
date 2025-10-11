@@ -32,13 +32,19 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "products",
         icon: "lucide--package",
         label: "Products",
-        url: "/apps/ecommerce/products",
+        url: "/catalogs/products",
     },
     {
         id: "brands",
         icon: "lucide--tag",
         label: "Brands",
         url: "/catalogs/brands",
+    },
+    {
+        id: "categories",
+        icon: "lucide--folder-tree",
+        label: "Categories",
+        url: "/catalogs/categories",
     },
     {
         id: "customers-label",
@@ -49,7 +55,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "customers",
         icon: "lucide--users",
         label: "Customers",
-        url: "/apps/ecommerce/customers",
+        url: "/customers",
     },
     {
         id: "marketing-label",
@@ -120,14 +126,28 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         url: "/settings/general",
     },
     {
+        id: "payments",
+        icon: "lucide--credit-card",
+        label: "Payments",
+        url: "/settings/payments",
+    },
+    {
+        id: "shippings",
+        icon: "lucide--truck",
+        label: "Shippings",
+        url: "/settings/shippings",
+    },
+    {
         id: "old-label",
         isTitle: true,
         label: "Old",
+        hidden: true,
     },
     {
         id: "dashboards-old",
         icon: "lucide--monitor-dot",
         label: "Dashboard",
+        hidden: true,
         children: [
             {
                 id: "dashboards-ecommerce",
@@ -150,6 +170,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "agentic-hub",
         icon: "lucide--bot-message-square",
         label: "Agentic Hub",
+        hidden: true,
         children: [
             {
                 id: "agentic-hub-storage",
@@ -163,6 +184,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "apps-ecommerce",
         icon: "lucide--store",
         label: "Ecommerce",
+        hidden: true,
         children: [
             {
                 id: "apps-ecommerce-orders",
@@ -195,6 +217,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "apps-ai",
         icon: "lucide--brain-circuit",
         label: "Gen AI",
+        hidden: true,
         children: [
             {
                 id: "apps-ai-home",
@@ -223,17 +246,20 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         icon: "lucide--server",
         label: "File Manager",
         url: "/apps/file-manager",
+        hidden: true,
     },
     {
         id: "apps-chat",
         icon: "lucide--messages-square",
         label: "Chat",
         url: "/apps/chat",
+        hidden: true,
     },
     {
         id: "auth",
         icon: "lucide--shield-check",
         label: "Auth",
+        hidden: true,
         children: [
             {
                 id: "auth-login",
@@ -261,6 +287,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "pages",
         icon: "lucide--files",
         label: "Pages",
+        hidden: true,
         children: [
             {
                 id: "pages-settings",
@@ -279,6 +306,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         icon: "lucide--file",
         label: "Landing",
         url: "/landing",
+        hidden: true,
         linkProp: {
             target: "_blank",
         },
@@ -289,6 +317,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         label: "Layout Builder",
         url: "/layout-builder",
         badges: ["new"],
+        hidden: true,
         linkProp: {
             target: "_blank",
         },
