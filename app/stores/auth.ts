@@ -55,8 +55,10 @@ export const useAuthStore = defineStore("auth", () => {
         token.value = null;
         user.value = null;
 
-        // Redirect to login
-        await navigateTo("/auth/login");
+        // Redirect to login - check if we're in browser
+        if (import.meta.client) {
+            await navigateTo("/auth/login");
+        }
     };
 
     return {

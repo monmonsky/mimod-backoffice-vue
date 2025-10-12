@@ -193,7 +193,7 @@ const formatNumber = (value: number) => {
             <div class="card-body">
                 <div class="flex items-center justify-between">
                     <h3 class="card-title">Recent Orders</h3>
-                    <NuxtLink to="/apps/ecommerce/orders" class="btn btn-ghost btn-sm gap-2">
+                    <NuxtLink to="/orders" class="btn btn-ghost btn-sm gap-2">
                         View All
                         <span class="iconify lucide--arrow-right size-4" />
                     </NuxtLink>

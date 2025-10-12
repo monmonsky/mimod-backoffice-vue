@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
     app: {
         head: {
+            titleTemplate: "%s - Nexus Admin",
             script: [{ src: "/js/prefetch-config.js", async: true }],
             htmlAttrs: {
                 class: "group/html",

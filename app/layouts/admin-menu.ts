@@ -21,7 +21,7 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         id: "orders",
         icon: "lucide--shopping-cart",
         label: "Orders",
-        url: "/apps/ecommerce/orders",
+        url: "/orders",
     },
     {
         id: "catalogs-label",
