@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import StoreTokensGenerateTokenModal from "./GenerateTokenModal.vue";
+
 definePageMeta({
     layout: "admin",
     middleware: "auth",

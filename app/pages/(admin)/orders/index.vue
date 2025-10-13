@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import OrdersTable from "~/components/orders/OrdersTable.vue";
+import OrdersTable from "./OrdersTable.vue";
 
 definePageMeta({
     layout: "admin",

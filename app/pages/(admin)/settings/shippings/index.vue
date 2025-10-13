@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import ShippingsRajaongkir from "./Rajaongkir.vue";
+import ShippingsOrigin from "./Origin.vue";
+import ShippingsMethods from "./Methods.vue";
+
 definePageMeta({
     layout: "admin",
     middleware: "auth",

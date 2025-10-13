@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import EmailTestConnectionModal from "~/components/email/TestConnectionModal.vue";
+import EmailTestConnectionModal from "./email/TestConnectionModal.vue";
 const { getSettings, updateSettings } = useSettings();
 const { success, error: showError } = useToast();
 

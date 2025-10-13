@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatPrice, formatDate } from "~/utils/formatters";
+
 const props = defineProps<{
     orderId: number;
 }>();
@@ -11,25 +13,6 @@ const { getOrderDetail } = useOrders();
 
 const { data: orderResponse, pending: loading } = await getOrderDetail(props.orderId);
 const order = computed(() => (orderResponse.value as any)?.data || {});
-
-const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(value);
-};
-
-const formatDate = (date: string) => {
-    if (!date) return "-";
-    return new Date(date).toLocaleString("id-ID", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
 
 const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -62,7 +45,7 @@ const getStatusColor = (status: string) => {
                 <div class="flex items-start justify-between">
                     <div>
                         <p class="text-2xl font-bold">{{ order.order_number }}</p>
-                        <p class="text-base-content/60 mt-1 text-sm">{{ formatDate(order.created_at) }}</p>
+                        <p class="text-base-content/60 mt-1 text-sm">{{ formatDate(order.created_at, 'datetime') }}</p>
                     </div>
                     <div class="flex gap-2">
                         <span :class="['badge badge-lg', getStatusColor(order.status)]">{{ order.status }}</span>
@@ -134,9 +117,9 @@ const getStatusColor = (status: string) => {
                                     <td class="text-sm text-base-content/60">
                                         {{ item.variant_name || '-' }}
                                     </td>
-                                    <td class="text-right">{{ formatCurrency(item.price) }}</td>
+                                    <td class="text-right">{{ formatPrice(item.price) }}</td>
                                     <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-right font-medium">{{ formatCurrency(item.subtotal) }}</td>
+                                    <td class="text-right font-medium">{{ formatPrice(item.subtotal) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -150,24 +133,24 @@ const getStatusColor = (status: string) => {
                         <div class="space-y-2">
                             <div class="flex justify-between text-sm">
                                 <span class="text-base-content/60">Subtotal</span>
-                                <span>{{ formatCurrency(order.subtotal || 0) }}</span>
+                                <span>{{ formatPrice(order.subtotal || 0) }}</span>
                             </div>
                             <div class="flex justify-between text-sm">
                                 <span class="text-base-content/60">Shipping</span>
-                                <span>{{ formatCurrency(order.shipping_cost || 0) }}</span>
+                                <span>{{ formatPrice(order.shipping_cost || 0) }}</span>
                             </div>
                             <div class="flex justify-between text-sm" v-if="order.tax_amount > 0">
                                 <span class="text-base-content/60">Tax</span>
-                                <span>{{ formatCurrency(order.tax_amount || 0) }}</span>
+                                <span>{{ formatPrice(order.tax_amount || 0) }}</span>
                             </div>
                             <div class="flex justify-between text-sm" v-if="order.discount_amount > 0">
                                 <span class="text-base-content/60">Discount</span>
-                                <span class="text-error">-{{ formatCurrency(order.discount_amount || 0) }}</span>
+                                <span class="text-error">-{{ formatPrice(order.discount_amount || 0) }}</span>
                             </div>
                             <div class="divider my-2"></div>
                             <div class="flex justify-between text-lg font-bold">
                                 <span>Total</span>
-                                <span>{{ formatCurrency(order.total_amount || 0) }}</span>
+                                <span>{{ formatPrice(order.total_amount || 0) }}</span>
                             </div>
                         </div>
                     </div>
@@ -198,7 +181,7 @@ const getStatusColor = (status: string) => {
                                 </div>
                                 <div class="flex justify-between" v-if="order.paid_at">
                                     <span class="text-base-content/60">Paid at:</span>
-                                    <span>{{ formatDate(order.paid_at) }}</span>
+                                    <span>{{ formatDate(order.paid_at, 'datetime') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -217,7 +200,7 @@ const getStatusColor = (status: string) => {
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-base-content/60">Cost:</span>
-                                    <span>{{ formatCurrency(order.shipping_cost || 0) }}</span>
+                                    <span>{{ formatPrice(order.shipping_cost || 0) }}</span>
                                 </div>
                                 <div class="flex justify-between" v-if="order.tracking_number">
                                     <span class="text-base-content/60">Tracking:</span>
@@ -225,7 +208,7 @@ const getStatusColor = (status: string) => {
                                 </div>
                                 <div class="flex justify-between" v-if="order.shipped_at">
                                     <span class="text-base-content/60">Shipped at:</span>
-                                    <span>{{ formatDate(order.shipped_at) }}</span>
+                                    <span>{{ formatDate(order.shipped_at, 'datetime') }}</span>
                                 </div>
                             </div>
                         </div>

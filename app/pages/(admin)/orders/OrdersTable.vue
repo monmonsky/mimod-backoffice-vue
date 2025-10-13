@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatPrice, formatDate } from "~/utils/formatters";
+
 const emit = defineEmits<{
     'update:statistics': [stats: any]
 }>();
@@ -93,24 +95,6 @@ const selectedOrder = ref<any>(null);
 const showStatusModal = ref(false);
 const showPaymentModal = ref(false);
 const showDetailModal = ref(false);
-
-const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(value);
-};
-
-const formatDate = (date: string) => {
-    return new Date(date).toLocaleString("id-ID", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
 
 const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -361,7 +345,7 @@ const handleAction = (action: string, order: any) => {
                                         <p class="text-base-content/60 text-xs">{{ order?.customer?.email || '' }}</p>
                                     </div>
                                 </td>
-                                <td class="font-medium">{{ formatCurrency(order?.total_amount || 0) }}</td>
+                                <td class="font-medium">{{ formatPrice(order?.total_amount || 0) }}</td>
                                 <td>
                                     <div class="flex items-center gap-1">
                                         <span :class="['badge badge-sm', getStatusColor(order?.status || '')]">
@@ -389,7 +373,7 @@ const handleAction = (action: string, order: any) => {
                                         {{ order?.payment_method || 'N/A' }}
                                     </span>
                                 </td>
-                                <td class="text-sm">{{ order?.created_at ? formatDate(order.created_at) : 'N/A' }}</td>
+                                <td class="text-sm">{{ order?.created_at ? formatDate(order.created_at, 'datetime') : 'N/A' }}</td>
                                 <td>
                                     <div class="flex justify-end">
                                         <details class="dropdown dropdown-end">
@@ -459,19 +443,19 @@ const handleAction = (action: string, order: any) => {
         </div>
 
         <!-- Modals -->
-        <OrdersUpdateStatusModal
+        <UpdateStatusModal
             v-if="showStatusModal && selectedOrder"
             :order="selectedOrder"
             @close="showStatusModal = false"
             @updated="handleStatusUpdated" />
 
-        <OrdersUpdatePaymentModal
+        <UpdatePaymentModal
             v-if="showPaymentModal && selectedOrder"
             :order="selectedOrder"
             @close="showPaymentModal = false"
             @updated="handlePaymentUpdated" />
 
-        <OrdersDetailModal
+        <DetailModal
             v-if="showDetailModal && selectedOrder"
             :order-id="selectedOrder.id"
             @close="showDetailModal = false" />

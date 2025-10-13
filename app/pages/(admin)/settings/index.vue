@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import SettingsGeneral from "./SettingsGeneral.vue";
+import SettingsStore from "./SettingsStore.vue";
+import SettingsEmail from "./SettingsEmail.vue";
+import SettingsSeo from "./SettingsSeo.vue";
+
 definePageMeta({
     layout: "admin",
     middleware: "auth",

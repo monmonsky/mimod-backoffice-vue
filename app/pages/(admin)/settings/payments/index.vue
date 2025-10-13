@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import PaymentsMidtrans from "./Midtrans.vue";
+import PaymentsBankTransfer from "./BankTransfer.vue";
+import PaymentsCod from "./Cod.vue";
+import PaymentsTax from "./Tax.vue";
+
 definePageMeta({
     layout: "admin",
     middleware: "auth",
