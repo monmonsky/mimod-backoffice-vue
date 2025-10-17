@@ -8,6 +8,7 @@ definePageMeta({
 const { createProduct } = useProducts();
 const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
+const { generateSeo } = useAISeo();
 
 const form = ref({
     name: "",
@@ -20,6 +21,11 @@ const form = ref({
     images: [] as string[],
     status: "draft", // Auto-set to draft, will be activated after variants added
     is_featured: false,
+    seo_meta: {
+        title: "",
+        description: "",
+        keywords: "",
+    },
 });
 
 // Store temp images data
@@ -29,6 +35,7 @@ const sessionId = ref<string>("");
 const tagInput = ref("");
 const loading = ref(false);
 const uploading = ref(false);
+const generatingSeo = ref(false);
 
 // Fetch brands for dropdown
 const { getBrands } = useBrands();
@@ -120,6 +127,56 @@ const removeImage = (index: number) => {
     form.value.images.splice(index, 1);
 };
 
+// Generate SEO by AI
+const handleGenerateSeo = async () => {
+    // Validation
+    if (!form.value.name) {
+        showError("Product name is required to generate SEO");
+        return;
+    }
+
+    if (!form.value.description) {
+        showError("Product description is required to generate SEO");
+        return;
+    }
+
+    try {
+        generatingSeo.value = true;
+
+        // Get brand name
+        const brandName = brands.value.find((b: any) => b.id == form.value.brand_id)?.name || "";
+
+        // Get category names
+        const categoryNames = categories.value
+            .filter((c: any) => selectedCategories.value.includes(c.id))
+            .map((c: any) => c.name);
+
+        // Prepare params
+        const params = {
+            name: form.value.name,
+            description: form.value.description,
+            brand_name: brandName,
+            categories: categoryNames,
+            tags: form.value.tags,
+            age_min: form.value.age_min,
+            age_max: form.value.age_max,
+        };
+
+        const response = await generateSeo(params);
+
+        if (response.data) {
+            form.value.seo_meta.title = response.data.title;
+            form.value.seo_meta.description = response.data.description;
+            form.value.seo_meta.keywords = response.data.keywords;
+            success("SEO generated successfully!");
+        }
+    } catch (err: any) {
+        showError(err?.data?.message || "Failed to generate SEO");
+    } finally {
+        generatingSeo.value = false;
+    }
+};
+
 // Submit form
 const handleSubmit = async () => {
     if (!form.value.name) {
@@ -152,6 +209,7 @@ const handleSubmit = async () => {
             images: form.value.images,
             status: form.value.status as "active" | "inactive" | "draft",
             is_featured: form.value.is_featured,
+            seo_meta: form.value.seo_meta,
         };
 
         // Create product first
@@ -407,6 +465,73 @@ const handleSubmit = async () => {
                                     You can select multiple images. Supported: JPG, PNG, GIF, WebP. Max 10MB per image.
                                 </p>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- SEO Meta -->
+                    <div class="card bg-base-100 shadow md:col-span-2">
+                        <div class="card-body">
+                            <div class="flex items-center justify-between">
+                                <div class="card-title">
+                                    <span class="iconify lucide--search size-5" />
+                                    SEO Meta Information
+                                </div>
+                                <button
+                                    type="button"
+                                    @click="handleGenerateSeo"
+                                    class="btn btn-primary btn-sm"
+                                    :disabled="generatingSeo || !form.name || !form.description">
+                                    <span v-if="generatingSeo" class="loading loading-spinner loading-xs"></span>
+                                    <span v-else class="iconify lucide--sparkles size-4" />
+                                    {{ generatingSeo ? "Generating..." : "Generate by AI" }}
+                                </button>
+                            </div>
+                            <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
+                                <div class="space-y-2">
+                                    <label class="fieldset-label" for="seo_title">
+                                        SEO Title
+                                    </label>
+                                    <input
+                                        id="seo_title"
+                                        v-model="form.seo_meta.title"
+                                        type="text"
+                                        class="input w-full"
+                                        placeholder="SEO Title untuk Google Search"
+                                        maxlength="60" />
+                                    <p class="text-base-content/60 text-xs">
+                                        Recommended: 50-60 characters ({{ form.seo_meta.title.length }}/60)
+                                    </p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="fieldset-label" for="seo_description">
+                                        SEO Meta Description
+                                    </label>
+                                    <textarea
+                                        id="seo_description"
+                                        v-model="form.seo_meta.description"
+                                        placeholder="Meta description untuk snippet Google Search Results"
+                                        class="textarea w-full"
+                                        rows="3"
+                                        maxlength="160"></textarea>
+                                    <p class="text-base-content/60 text-xs">
+                                        Recommended: 120-160 characters ({{ form.seo_meta.description.length }}/160)
+                                    </p>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="fieldset-label" for="seo_keywords">
+                                        SEO Keywords
+                                    </label>
+                                    <input
+                                        id="seo_keywords"
+                                        v-model="form.seo_meta.keywords"
+                                        type="text"
+                                        class="input w-full"
+                                        placeholder="keyword1, keyword2, keyword3" />
+                                    <p class="text-base-content/60 text-xs">
+                                        Separate keywords with commas
+                                    </p>
+                                </div>
+                            </fieldset>
                         </div>
                     </div>
 

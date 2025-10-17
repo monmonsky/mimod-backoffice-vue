@@ -51,7 +51,10 @@ export interface Product {
     age_max: number;
     tags: string; // JSON string
     status: "active" | "inactive" | "draft";
-    seo_meta: string | null;
+    seo_title?: string;
+    seo_description?: string;
+    seo_keywords?: string;
+    seo_meta?: string | null; // Legacy field
     view_count: number;
     is_featured: boolean;
     created_by: number | null;
@@ -74,6 +77,11 @@ export interface ProductFormData {
     images: string[];
     status: "active" | "inactive" | "draft";
     is_featured: boolean;
+    seo_meta?: {
+        title: string;
+        description: string;
+        keywords: string;
+    };
 }
 
 export interface ProductStatistics {

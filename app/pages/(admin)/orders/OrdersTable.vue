@@ -160,7 +160,7 @@ const handleSendInvoice = async (order: any) => {
     }
 
     try {
-        const response = await sendInvoiceEmail(order.id);
+        await sendInvoiceEmail(order.id);
         success(`Invoice sent to ${order.customer.email}`);
     } catch (err: any) {
         showError(err?.data?.message || "Failed to send invoice email");
@@ -189,29 +189,35 @@ const handleAction = (action: string, order: any) => {
                 <!-- Filters -->
                 <div class="px-5 pt-5 pb-4 space-y-4">
                     <!-- Row 1: Search & Main Filters -->
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <label class="input input-sm">
-                            <span class="iconify lucide--search text-base-content/80 size-3.5" />
-                            <input
-                                v-model="searchQuery"
-                                type="search"
-                                class="w-24 sm:w-48"
-                                placeholder="Search orders..."
-                                aria-label="Search orders" />
-                        </label>
-                        <select v-model="selectedStatus" class="select select-sm w-32">
-                            <option value="all">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                        <select v-model="selectedPaymentStatus" class="select select-sm w-36">
-                            <option value="all">All Payment</option>
-                            <option value="paid">Paid</option>
-                            <option value="unpaid">Unpaid</option>
-                        </select>
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <label class="input input-sm">
+                                <span class="iconify lucide--search text-base-content/80 size-3.5" />
+                                <input
+                                    v-model="searchQuery"
+                                    type="search"
+                                    class="w-24 sm:w-48"
+                                    placeholder="Search orders..."
+                                    aria-label="Search orders" />
+                            </label>
+                            <select v-model="selectedStatus" class="select select-sm w-32">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <select v-model="selectedPaymentStatus" class="select select-sm w-36">
+                                <option value="all">All Payment</option>
+                                <option value="paid">Paid</option>
+                                <option value="unpaid">Unpaid</option>
+                            </select>
+                        </div>
+                        <NuxtLink to="/orders/create" class="btn btn-primary btn-sm">
+                            <span class="iconify lucide--plus size-4" />
+                            Create Order
+                        </NuxtLink>
                     </div>
 
                     <!-- Row 2: Advanced Filters (Collapsible) -->

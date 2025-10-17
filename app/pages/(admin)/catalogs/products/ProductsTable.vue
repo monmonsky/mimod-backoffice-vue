@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { getProducts, deleteProduct } = useProducts();
+const { deleteProduct } = useProducts();
 const { success, error: showError } = useToast();
 
 // Filters
@@ -21,9 +21,20 @@ const params = computed(() => ({
 }));
 
 // Fetch products using composable - reactively watch params
-const { data: productsResponse, pending, refresh } = await getProducts(params.value, {
-    watch: [params],
-});
+const { data: productsResponse, pending, refresh } = await useAsyncData(
+    "products",
+    () =>
+        $fetch("/catalog/products", {
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+            params: params.value,
+        }),
+    {
+        watch: [params],
+    }
+);
 
 const products = computed(() => {
     const response = productsResponse.value as any;
@@ -346,8 +357,9 @@ const getPrimaryImage = (images: any[]) => {
                             <span class="iconify lucide--chevron-left" />
                         </button>
                         <button
-                            v-for="pageNum in Math.min(pagination.last_page, 5)"
+                            v-for="pageNum in pagination.last_page"
                             :key="pageNum"
+                            v-show="Math.abs(pageNum - pagination.current_page) < 3 || pageNum === 1 || pageNum === pagination.last_page"
                             :class="[
                                 'btn btn-circle sm:btn-sm btn-xs',
                                 pageNum === pagination.current_page ? 'btn-primary' : 'btn-ghost',

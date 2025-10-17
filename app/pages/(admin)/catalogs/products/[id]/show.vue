@@ -67,6 +67,56 @@ const highestPrice = computed(() => {
     if (!product.value?.variants?.length) return 0;
     return Math.max(...product.value.variants.map((v: any) => parseFloat(v.price)));
 });
+
+// Parse SEO meta
+const seoMeta = computed(() => {
+    if (!product.value) return null;
+
+    let seoData = {
+        title: "",
+        description: "",
+        keywords: "",
+    };
+
+    // Try to parse seo_meta JSON field
+    if (product.value.seo_meta) {
+        try {
+            const parsed = typeof product.value.seo_meta === "string"
+                ? JSON.parse(product.value.seo_meta)
+                : product.value.seo_meta;
+            seoData = {
+                title: parsed.title || "",
+                description: parsed.description || "",
+                keywords: parsed.keywords || "",
+            };
+        } catch {
+            // Fallback to individual fields
+            seoData = {
+                title: product.value.seo_title || "",
+                description: product.value.seo_description || "",
+                keywords: product.value.seo_keywords || "",
+            };
+        }
+    } else {
+        // Fallback to individual fields
+        seoData = {
+            title: product.value.seo_title || "",
+            description: product.value.seo_description || "",
+            keywords: product.value.seo_keywords || "",
+        };
+    }
+
+    return seoData;
+});
+
+// Parse keywords array
+const seoKeywords = computed(() => {
+    if (!seoMeta.value || !seoMeta.value.keywords) return [];
+    return seoMeta.value.keywords
+        .split(',')
+        .map((k: string) => k.trim())
+        .filter(Boolean);
+});
 </script>
 
 <template>
@@ -108,7 +158,7 @@ const highestPrice = computed(() => {
                             </div>
                             <div class="md:col-span-2">
                                 <label class="text-base-content/60 text-sm">Description</label>
-                                <p class="text-base-content/80">{{ product.description }}</p>
+                                <p class="text-base-content/80 whitespace-pre-line mt-2">{{ product.description }}</p>
                             </div>
                         </div>
                     </div>
@@ -168,6 +218,39 @@ const highestPrice = computed(() => {
                                 <div class="mt-2 flex flex-wrap gap-2">
                                     <span v-for="tag in tags" :key="tag" class="badge badge-sm badge-primary">
                                         {{ tag }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEO Meta Information -->
+                <div v-if="seoMeta && (seoMeta.title || seoMeta.description || seoMeta.keywords)" class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title">
+                            <span class="iconify lucide--search size-5" />
+                            SEO Meta Information
+                        </h3>
+                        <div class="space-y-4">
+                            <div v-if="seoMeta.title">
+                                <label class="text-base-content/60 text-sm">SEO Title</label>
+                                <p class="font-medium mt-1">{{ seoMeta.title }}</p>
+                                <p class="text-base-content/60 text-xs mt-1">{{ seoMeta.title.length }} characters</p>
+                            </div>
+                            <div v-if="seoMeta.description">
+                                <label class="text-base-content/60 text-sm">Meta Description</label>
+                                <p class="text-base-content/80 mt-1">{{ seoMeta.description }}</p>
+                                <p class="text-base-content/60 text-xs mt-1">{{ seoMeta.description.length }} characters</p>
+                            </div>
+                            <div v-if="seoKeywords.length > 0">
+                                <label class="text-base-content/60 text-sm">Keywords</label>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    <span
+                                        v-for="keyword in seoKeywords"
+                                        :key="keyword"
+                                        class="badge badge-sm badge-outline">
+                                        {{ keyword }}
                                     </span>
                                 </div>
                             </div>

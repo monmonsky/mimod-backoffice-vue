@@ -10,9 +10,11 @@ const settings = computed(() => (settingsResponse.value as any)?.data || {});
 
 const form = ref({
     enabled: false,
-    api_key: "",
-    account_type: "starter",
     base_url: "https://api.rajaongkir.com/starter",
+    account_type: "starter",
+    api_key_cost: "",
+    api_key_waybill: "",
+    base_url_pro: "https://pro.rajaongkir.com/api",
     cache_enabled: true,
     cache_duration: 24,
     enable_insurance: true,
@@ -38,9 +40,11 @@ watch(
             if (rajaongkirData) {
                 form.value = {
                     enabled: rajaongkirData.enabled ?? false,
-                    api_key: rajaongkirData.api_key ?? "",
-                    account_type: rajaongkirData.account_type ?? "starter",
                     base_url: rajaongkirData.base_url ?? "https://api.rajaongkir.com/starter",
+                    account_type: rajaongkirData.account_type ?? "starter",
+                    api_key_cost: rajaongkirData.api_key_cost ?? "",
+                    api_key_waybill: rajaongkirData.api_key_waybill ?? "",
+                    base_url_pro: rajaongkirData.base_url_pro ?? "https://pro.rajaongkir.com/api",
                     cache_enabled: rajaongkirData.cache_enabled ?? true,
                     cache_duration: rajaongkirData.cache_duration ?? 24,
                     enable_insurance: rajaongkirData.enable_insurance ?? true,
@@ -114,16 +118,6 @@ const handleSubmit = async () => {
 
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <fieldset class="fieldset">
-                            <legend class="fieldset-legend">API Key <span class="text-error">*</span></legend>
-                            <input
-                                v-model="form.api_key"
-                                type="text"
-                                class="input input-bordered w-full font-mono"
-                                placeholder="your-api-key"
-                                :disabled="saving" />
-                        </fieldset>
-
-                        <fieldset class="fieldset">
                             <legend class="fieldset-legend">Account Type</legend>
                             <select v-model="form.account_type" class="select select-bordered w-full" :disabled="saving">
                                 <option value="starter">Starter</option>
@@ -132,13 +126,48 @@ const handleSubmit = async () => {
                             </select>
                         </fieldset>
 
-                        <fieldset class="fieldset md:col-span-2">
-                            <legend class="fieldset-legend">Base URL</legend>
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend">Base URL (Starter/Basic)</legend>
                             <input
                                 v-model="form.base_url"
                                 type="url"
                                 class="input input-bordered w-full font-mono text-sm"
+                                :disabled="saving"
+                                placeholder="https://api.rajaongkir.com/starter" />
+                            <p class="text-base-content/60 mt-1 text-xs">For Starter and Basic accounts</p>
+                        </fieldset>
+
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend">API Key (Cost Calculation)</legend>
+                            <input
+                                v-model="form.api_key_cost"
+                                type="text"
+                                class="input input-bordered w-full font-mono"
+                                placeholder="your-api-key-for-cost"
                                 :disabled="saving" />
+                            <p class="text-base-content/60 mt-1 text-xs">Used for shipping cost calculation</p>
+                        </fieldset>
+
+                        <fieldset class="fieldset">
+                            <legend class="fieldset-legend">API Key (Waybill Tracking)</legend>
+                            <input
+                                v-model="form.api_key_waybill"
+                                type="text"
+                                class="input input-bordered w-full font-mono"
+                                placeholder="your-api-key-for-waybill"
+                                :disabled="saving" />
+                            <p class="text-base-content/60 mt-1 text-xs">Used for tracking waybill/resi</p>
+                        </fieldset>
+
+                        <fieldset class="fieldset md:col-span-2">
+                            <legend class="fieldset-legend">Base URL Pro</legend>
+                            <input
+                                v-model="form.base_url_pro"
+                                type="url"
+                                class="input input-bordered w-full font-mono text-sm"
+                                :disabled="saving"
+                                placeholder="https://pro.rajaongkir.com/api" />
+                            <p class="text-base-content/60 mt-1 text-xs">For Pro account only</p>
                         </fieldset>
                     </div>
                 </div>
