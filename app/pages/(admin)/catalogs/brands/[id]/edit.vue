@@ -101,11 +101,6 @@ const handleFileUpload = async (event: Event) => {
         formData.append("image", file);
         formData.append("type", "brand"); // Type: brand, category, product, avatar, etc
 
-        console.log("=== UPLOAD IMAGE ===");
-        console.log("File:", file.name, file.type, formatFileSize(file.size));
-        console.log("Type: brand");
-        console.log("===================");
-
         const response = (await $fetch("/upload/image", {
             baseURL: useRuntimeConfig().public.apiBase,
             method: "POST",
@@ -114,10 +109,6 @@ const handleFileUpload = async (event: Event) => {
             },
             body: formData,
         })) as any;
-
-        console.log("=== UPLOAD RESPONSE ===");
-        console.log("Response:", response);
-        console.log("======================");
 
         form.value.logo = response.data.url;
         logoPreview.value = response.data.url;
@@ -140,14 +131,6 @@ const removeLogo = () => {
 const handleSubmit = async () => {
     try {
         loading.value = true;
-
-        // Debug: Log data yang akan dikirim
-        console.log("=== DEBUG UPDATE BRAND ===");
-        console.log("Brand ID:", brandId);
-        console.log("Form Data:", JSON.stringify(form.value, null, 2));
-        console.log("API Endpoint:", `/catalog/brands/${brandId}`);
-        console.log("Method: PUT");
-        console.log("========================");
 
         await updateBrand(brandId, form.value);
         success("Brand updated successfully!");

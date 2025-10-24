@@ -40,24 +40,12 @@ const products = computed(() => {
     const response = productsResponse.value as any;
     const productsList = response?.data?.products?.data || [];
 
-    console.log('=== Products API Response ===');
-    console.log('Full response:', response);
-    console.log('Products list:', productsList);
-    if (productsList.length > 0) {
-        console.log('First product sample:', productsList[0]);
-        console.log('First product total_variants:', productsList[0]?.total_variants);
-    }
-
     return productsList;
 });
 
 const statistics = computed(() => {
     const response = productsResponse.value as any;
     const stats = response?.data?.statistics || {};
-
-    console.log('=== Statistics ===');
-    console.log('Statistics object:', stats);
-    console.log('Total variants in stats:', stats?.total_variants);
 
     return stats;
 });

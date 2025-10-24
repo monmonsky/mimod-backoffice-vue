@@ -2,6 +2,7 @@
 const searchQuery = ref("");
 const dateFilter = ref("");
 const actionFilter = ref("");
+const perPage = ref(10);
 
 const filters = computed(() => ({
     search: searchQuery.value || undefined,
@@ -40,11 +41,16 @@ const activities = computed(() => {
 const pagination = computed(() => {
     const response = activityResponse.value as any;
     const data = response?.data;
+    const currentPage = data?.current_page || 1;
+    const perPageValue = data?.per_page || 10;
+    const total = data?.total || 0;
     return {
-        current_page: data?.current_page || 1,
+        current_page: currentPage,
         last_page: data?.last_page || 1,
-        per_page: data?.per_page || 10,
-        total: data?.total || 0,
+        per_page: perPageValue,
+        total: total,
+        from: (currentPage - 1) * perPageValue + 1,
+        to: Math.min(currentPage * perPageValue, total),
     };
 });
 
@@ -196,7 +202,7 @@ const formatDate = (dateString: string) => {
                 <div v-if="pagination" class="flex items-center justify-between p-6">
                     <div class="text-base-content/80 hover:text-base-content flex gap-2 text-sm">
                         <span class="hidden sm:inline">Per page</span>
-                        <select v-model="per_page" class="select select-xs w-18" aria-label="Per page">
+                        <select v-model="perPage" class="select select-xs w-18" aria-label="Per page">
                             <option :value="10">10</option>
                             <option :value="20">20</option>
                             <option :value="50">50</option>

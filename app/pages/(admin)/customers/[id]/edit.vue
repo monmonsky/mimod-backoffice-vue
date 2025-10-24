@@ -15,11 +15,6 @@ const { data: customerResponse, pending } = getCustomer(customerId);
 
 const customer = computed(() => {
     const response = customerResponse.value as any;
-    console.log("=== CUSTOMER RESPONSE ===");
-    console.log("Full Response:", response);
-    console.log("response?.data:", response?.data);
-    console.log("response?.data?.customer:", response?.data?.customer);
-    console.log("========================");
 
     // Try different response structures
     return response?.data?.customer || response?.data || null;
@@ -45,10 +40,6 @@ const form = ref({
 watch(
     customer,
     (newCustomer) => {
-        console.log("=== WATCH CUSTOMER ===");
-        console.log("newCustomer:", newCustomer);
-        console.log("=====================");
-
         if (newCustomer) {
             // Parse preferences
             let prefs = {
@@ -73,9 +64,6 @@ watch(
                 notes: newCustomer.notes || "",
             };
 
-            console.log("=== FORM UPDATED ===");
-            console.log("form.value:", form.value);
-            console.log("===================");
         }
     },
     { immediate: true },
@@ -92,11 +80,6 @@ const handleSubmit = async () => {
             ...form.value,
             preferences: JSON.stringify(form.value.preferences),
         };
-
-        console.log("=== DEBUG UPDATE CUSTOMER ===");
-        console.log("Customer ID:", customerId);
-        console.log("Form Data:", JSON.stringify(data, null, 2));
-        console.log("============================");
 
         await updateCustomer(customerId, data);
         success("Customer updated successfully!");

@@ -47,11 +47,26 @@ const form = ref({
     },
 });
 
-// Store existing images from product (separate from form.images for display)
-const existingImages = ref<Array<{ id: number; url: string; is_primary: boolean; sort_order: number }>>([]);
+// Store existing media from product (separate from form.images for display)
+const existingImages = ref<Array<{
+    id: number;
+    url: string;
+    is_primary: boolean;
+    sort_order: number;
+    media_type?: string;
+    thumbnail_url?: string;
+    duration?: number;
+}>>([]);
 
-// Store temp images data (for newly uploaded images)
-const tempImages = ref<Array<{ url: string; path: string }>>([]);
+// Store temp media data (for newly uploaded images + videos)
+const tempMedia = ref<Array<{
+    url: string;
+    path: string;
+    media_type: string;
+    thumbnail_url?: string;
+    duration?: number;
+    file_size?: number;
+}>>([]);
 const sessionId = ref<string>("");
 
 const tagInput = ref("");
@@ -96,13 +111,16 @@ watch(
     product,
     (newProduct) => {
         if (newProduct) {
-            // Store existing images
+            // Store existing media (images + videos)
             if (Array.isArray(newProduct.images)) {
                 existingImages.value = newProduct.images.map((img: any) => ({
                     id: img.id,
                     url: img.url,
                     is_primary: img.is_primary,
                     sort_order: img.sort_order,
+                    media_type: img.media_type || 'image',
+                    thumbnail_url: img.thumbnail_url,
+                    duration: img.duration,
                 }));
             }
 
@@ -185,7 +203,7 @@ const handleTagKeydown = (event: KeyboardEvent) => {
     }
 };
 
-// Handle file upload to temp
+// Handle file upload to temp (images + video)
 const handleFileUpload = async (event: Event) => {
     const target = event.target as HTMLInputElement;
     const files = target.files;
@@ -196,23 +214,53 @@ const handleFileUpload = async (event: Event) => {
         uploading.value = true;
         const fileArray = Array.from(files);
 
-        // Upload to temp folder
-        const response = await uploadTempImages(fileArray, { type: "product", maxSizeMB: 10 }, sessionId.value);
+        // Upload to temp folder (API handles both images and video)
+        const response = await uploadTempImages(
+            fileArray,
+            {
+                type: "product",
+                maxSizeMB: 100,
+                allowedTypes: [
+                    "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+                    "video/mp4", "video/quicktime", "video/x-msvideo"
+                ]
+            },
+            sessionId.value
+        );
 
         // Store session ID for future uploads
         if (!sessionId.value) {
             sessionId.value = response.data.session_id;
         }
 
-        // Store temp image data
-        response.data.images.forEach((img) => {
-            tempImages.value.push({ url: img.url, path: img.path });
-            form.value.images.push(img.url);
+        // Store temp media data (images + video)
+        response.data.images.forEach((media: any) => {
+            tempMedia.value.push({
+                url: media.url,
+                path: media.path,
+                media_type: media.media_type || 'image',
+                thumbnail_url: media.thumbnail_url,
+                duration: media.duration,
+                file_size: media.file_size
+            });
+            form.value.images.push(media.url);
         });
 
-        success(`${response.data.count} image(s) uploaded successfully!`);
+        // Smart success message based on uploaded content
+        const imageCount = response.data.images.filter((m: any) => m.media_type === 'image').length;
+        const videoCount = response.data.images.filter((m: any) => m.media_type === 'video').length;
+
+        let message = '';
+        if (imageCount > 0 && videoCount > 0) {
+            message = `${imageCount} image(s) and ${videoCount} video(s) uploaded successfully!`;
+        } else if (videoCount > 0) {
+            message = `${videoCount} video(s) uploaded successfully!`;
+        } else {
+            message = `${imageCount} image(s) uploaded successfully!`;
+        }
+        success(message);
     } catch (err: any) {
-        showError(err.message || "Failed to upload images");
+        showError(err.message || "Failed to upload media");
     } finally {
         uploading.value = false;
     }
@@ -240,16 +288,16 @@ const setPrimaryImage = async (imageId: number) => {
     }
 };
 
-// Remove image
-const removeImage = async (index: number) => {
-    // Check if removing from existing images or temp images
+// Remove media (image or video)
+const removeMedia = async (index: number) => {
+    // Check if removing from existing media or temp media
     if (index < existingImages.value.length) {
-        // Removing existing image - need to call API
-        const imageToRemove = existingImages.value[index];
-        if (!imageToRemove) return;
+        // Removing existing media - need to call API
+        const mediaToRemove = existingImages.value[index];
+        if (!mediaToRemove) return;
 
         try {
-            await $fetch(`/upload/product-image/${imageToRemove.id}`, {
+            await $fetch(`/upload/product-image/${mediaToRemove.id}`, {
                 method: "DELETE",
                 baseURL: useRuntimeConfig().public.apiBase,
                 headers: {
@@ -261,22 +309,22 @@ const removeImage = async (index: number) => {
             existingImages.value.splice(index, 1);
 
             // Also remove from form.images by URL
-            const formIndex = form.value.images.indexOf(imageToRemove.url);
+            const formIndex = form.value.images.indexOf(mediaToRemove.url);
             if (formIndex !== -1) {
                 form.value.images.splice(formIndex, 1);
             }
 
-            success("Image deleted successfully");
+            success(mediaToRemove.media_type === 'video' ? "Video deleted successfully" : "Image deleted successfully");
         } catch (err: any) {
-            showError(err?.data?.message || "Failed to delete image");
+            showError(err?.data?.message || "Failed to delete media");
         }
     } else {
-        // Removing temp image - just remove from arrays
+        // Removing temp media - just remove from arrays
         const tempIndex = index - existingImages.value.length;
-        const removedTemp = tempImages.value[tempIndex];
+        const removedTemp = tempMedia.value[tempIndex];
         if (!removedTemp) return;
 
-        tempImages.value.splice(tempIndex, 1);
+        tempMedia.value.splice(tempIndex, 1);
 
         // Remove from form.images by URL
         const formIndex = form.value.images.indexOf(removedTemp.url);
@@ -356,13 +404,21 @@ const handleSubmit = async () => {
     try {
         loading.value = true;
 
-        // Move temp images to permanent location if any
-        if (tempImages.value.length > 0) {
-            const tempPaths = tempImages.value.map((img) => img.path);
+        // Move temp media (images + video) to permanent location if any
+        if (tempMedia.value.length > 0) {
+            const tempPaths = tempMedia.value.map((media) => media.path);
+            const metadata = tempMedia.value.map((media) => ({
+                media_type: media.media_type,
+                duration: media.duration,
+                file_size: media.file_size,
+                thumbnail_url: media.thumbnail_url,
+            }));
+
             await moveImages({
                 temp_paths: tempPaths,
                 type: "product",
                 product_id: productId,
+                metadata: metadata,
             });
         }
 
@@ -568,44 +624,82 @@ const handleSubmit = async () => {
                         </div>
                     </div>
 
-                    <!-- Product Images -->
+                    <!-- Product Media (Images & Video) -->
                     <div class="card bg-base-100 shadow md:col-span-2">
                         <div class="card-body">
-                            <div class="card-title">Product Images</div>
+                            <div class="card-title">
+                                <span class="iconify lucide--images size-5" />
+                                Product Media (Images & Video)
+                            </div>
                             <div class="mt-2">
-                                <!-- Existing Images from Product -->
+                                <!-- Existing Media from Product -->
                                 <div v-if="existingImages.length > 0" class="mb-4">
-                                    <label class="text-base-content/60 mb-2 block text-sm">Existing Images</label>
+                                    <label class="text-base-content/60 mb-2 block text-sm">Existing Media</label>
                                     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                                         <div
-                                            v-for="(image, index) in existingImages"
-                                            :key="image.id"
+                                            v-for="(media, index) in existingImages"
+                                            :key="media.id"
                                             class="group relative aspect-square overflow-hidden rounded-lg border-2"
-                                            :class="image.is_primary ? 'border-primary' : 'border-base-300'">
-                                            <img :src="image.url" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
+                                            :class="media.is_primary ? 'border-primary' : media.media_type === 'video' ? 'border-primary' : 'border-base-300'">
+                                            <!-- Image Preview -->
+                                            <img v-if="media.media_type === 'image'" :src="media.url" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
+
+                                            <!-- Video Preview with Thumbnail -->
+                                            <div v-else class="relative h-full w-full">
+                                                <img
+                                                    v-if="media.thumbnail_url"
+                                                    :src="media.thumbnail_url"
+                                                    :alt="`Video thumbnail ${index + 1}`"
+                                                    class="h-full w-full object-cover" />
+                                                <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">
+                                                    <span class="iconify lucide--video size-12 text-base-content/40" />
+                                                </div>
+                                                <!-- Play Icon Overlay -->
+                                                <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                    <div class="bg-primary rounded-full p-3">
+                                                        <span class="iconify lucide--play size-6 text-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Media Type Badge for Video -->
+                                            <div v-if="media.media_type === 'video'" class="absolute top-2 left-2 badge badge-primary badge-sm gap-1 z-10">
+                                                <span class="iconify lucide--video size-3" />
+                                                Video
+                                            </div>
+
+                                            <!-- Video Duration -->
+                                            <div v-if="media.media_type === 'video' && media.duration" class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs z-10">
+                                                {{ Math.floor(media.duration / 60) }}:{{ String(media.duration % 60).padStart(2, '0') }}
+                                            </div>
+
+                                            <!-- Primary Badge -->
                                             <div
-                                                v-if="image.is_primary"
+                                                v-if="media.is_primary && media.media_type === 'image'"
                                                 class="absolute left-1 top-1 badge badge-primary badge-xs">
                                                 <span class="iconify lucide--star size-3" />
                                             </div>
+
+                                            <!-- Sort Order -->
                                             <div class="bg-base-100/80 absolute bottom-0 left-0 right-0 p-1 text-center backdrop-blur-sm">
-                                                <span class="text-xs">Sort: {{ image.sort_order }}</span>
+                                                <span class="text-xs">Sort: {{ media.sort_order }}</span>
                                             </div>
+
                                             <!-- Action buttons - show on hover -->
                                             <div class="absolute right-1 top-1 flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                                 <button
-                                                    v-if="!image.is_primary"
+                                                    v-if="!media.is_primary && media.media_type === 'image'"
                                                     type="button"
-                                                    @click="setPrimaryImage(image.id)"
+                                                    @click="setPrimaryImage(media.id)"
                                                     class="btn btn-circle btn-primary btn-xs"
                                                     title="Set as primary">
                                                     <span class="iconify lucide--star size-3" />
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    @click="removeImage(index)"
+                                                    @click="removeMedia(index)"
                                                     class="btn btn-circle btn-error btn-xs"
-                                                    title="Remove image">
+                                                    :title="`Remove ${media.media_type}`">
                                                     <span class="iconify lucide--trash-2 size-3" />
                                                 </button>
                                             </div>
@@ -613,19 +707,49 @@ const handleSubmit = async () => {
                                     </div>
                                 </div>
 
-                                <!-- Newly Uploaded Images (Temp) -->
-                                <div v-if="tempImages.length > 0" class="mb-4">
-                                    <label class="text-base-content/60 mb-2 block text-sm">New Images (Not Saved Yet)</label>
+                                <!-- Newly Uploaded Media (Temp) -->
+                                <div v-if="tempMedia.length > 0" class="mb-4">
+                                    <label class="text-base-content/60 mb-2 block text-sm">New Media (Not Saved Yet)</label>
                                     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                                         <div
-                                            v-for="(image, index) in tempImages"
-                                            :key="image.path"
+                                            v-for="(media, index) in tempMedia"
+                                            :key="media.path"
                                             class="group relative aspect-square overflow-hidden rounded-lg border-2 border-warning">
-                                            <img :src="image.url" :alt="`New image ${index + 1}`" class="h-full w-full object-cover" />
-                                            <div class="absolute left-1 top-1 badge badge-warning badge-xs">New</div>
+                                            <!-- Image Preview -->
+                                            <img v-if="media.media_type === 'image'" :src="media.url" :alt="`New image ${index + 1}`" class="h-full w-full object-cover" />
+
+                                            <!-- Video Preview with Thumbnail -->
+                                            <div v-else class="relative h-full w-full">
+                                                <img
+                                                    v-if="media.thumbnail_url"
+                                                    :src="media.thumbnail_url"
+                                                    :alt="`New video thumbnail ${index + 1}`"
+                                                    class="h-full w-full object-cover" />
+                                                <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">
+                                                    <span class="iconify lucide--video size-12 text-base-content/40" />
+                                                </div>
+                                                <!-- Play Icon Overlay -->
+                                                <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                    <div class="bg-warning rounded-full p-3">
+                                                        <span class="iconify lucide--play size-6 text-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Media Type Badge -->
+                                            <div class="absolute left-1 top-1 badge badge-warning badge-xs gap-1 z-10">
+                                                <span v-if="media.media_type === 'video'" class="iconify lucide--video size-3" />
+                                                {{ media.media_type === 'video' ? 'New Video' : 'New' }}
+                                            </div>
+
+                                            <!-- Video Duration -->
+                                            <div v-if="media.media_type === 'video' && media.duration" class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs z-10">
+                                                {{ Math.floor(media.duration / 60) }}:{{ String(media.duration % 60).padStart(2, '0') }}
+                                            </div>
+
                                             <button
                                                 type="button"
-                                                @click="removeImage(existingImages.length + index)"
+                                                @click="removeMedia(existingImages.length + index)"
                                                 class="btn btn-circle btn-error btn-xs absolute -right-1 -top-1 opacity-0 transition-opacity group-hover:opacity-100">
                                                 <span class="iconify lucide--x size-3" />
                                             </button>
@@ -636,22 +760,26 @@ const handleSubmit = async () => {
                                 <!-- Upload Area -->
                                 <div class="space-y-3">
                                     <div class="border-2 border-dashed border-base-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                                        <span class="iconify lucide--images text-base-content/40 mb-2 size-10 block mx-auto" />
+                                        <span class="iconify lucide--upload-cloud text-base-content/40 mb-2 size-10 block mx-auto" />
                                         <p class="text-base-content/60 mb-3 text-sm">
-                                            {{ form.images.length > 0 ? "Add more images" : "Upload product images" }}
+                                            {{ form.images.length > 0 ? "Add more images or video" : "Upload product images & video" }}
                                         </p>
                                         <label class="btn btn-primary btn-sm">
                                             <span v-if="uploading" class="loading loading-spinner loading-xs"></span>
                                             <span v-else class="iconify lucide--upload size-4" />
                                             {{ uploading ? "Uploading..." : "Choose Files" }}
-                                            <input type="file" accept="image/*" multiple class="hidden" @change="handleFileUpload" :disabled="uploading" />
+                                            <input type="file" accept="image/*,video/*" multiple class="hidden" @change="handleFileUpload" :disabled="uploading" />
                                         </label>
                                     </div>
                                 </div>
 
-                                <p class="text-base-content/60 mt-3 text-xs">
-                                    You can select multiple images. Supported: JPG, PNG, GIF, WebP. Max 10MB per image.
-                                </p>
+                                <div class="alert alert-info mt-3">
+                                    <span class="iconify lucide--info size-4" />
+                                    <div class="text-xs">
+                                        <p><strong>Images:</strong> JPG, PNG, GIF, WebP. Max 10MB per image.</p>
+                                        <p><strong>Video:</strong> MP4, MOV, AVI. Max 100MB. Max 1 video per product.</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

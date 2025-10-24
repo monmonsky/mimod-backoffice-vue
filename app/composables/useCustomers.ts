@@ -28,11 +28,6 @@ export const useCustomers = () => {
     };
 
     const createCustomer = async (data: CustomerFormData) => {
-        console.log("=== useCustomers.createCustomer ===");
-        console.log("URL:", `${config.public.apiBase}/customers`);
-        console.log("Body:", data);
-        console.log("==================================");
-
         return $fetch<CustomerCreateResponse>(`/customers`, {
             baseURL: config.public.apiBase,
             method: "POST",
@@ -44,12 +39,6 @@ export const useCustomers = () => {
     };
 
     const updateCustomer = async (customerId: number, data: CustomerFormData) => {
-        console.log("=== useCustomers.updateCustomer ===");
-        console.log("URL:", `${config.public.apiBase}/customers/${customerId}`);
-        console.log("Customer ID:", customerId);
-        console.log("Body:", data);
-        console.log("==================================");
-
         return $fetch<CustomerUpdateResponse>(`/customers/${customerId}`, {
             baseURL: config.public.apiBase,
             method: "PUT",

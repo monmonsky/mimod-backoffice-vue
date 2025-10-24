@@ -6,6 +6,10 @@ import RoleTable from "./RoleTable.vue";
 definePageMeta({
     layout: "admin",
 });
+
+// Set page title from admin menu
+const { setPageTitleFromMenu } = useAdminMenu();
+setPageTitleFromMenu();
 </script>
 <template>
     <div>

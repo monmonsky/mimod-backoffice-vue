@@ -75,19 +75,18 @@ const openAddModal = () => {
 const openEditModal = (variant: ProductVariant) => {
     editingVariant.value = variant;
 
-    // Get primary image URL from images array
-    const primaryImage = variant.images?.find(img => img.is_primary);
+    // Get image URLs from images array
     const imageUrls = variant.images?.map(img => img.url) || [];
 
     form.value = {
-        sku: variant.sku,
-        size: variant.size,
-        color: variant.color,
-        weight_gram: variant.weight_gram,
-        price: variant.price,
+        sku: variant.sku || "",
+        size: variant.size || "",
+        color: variant.color || "",
+        weight_gram: variant.weight_gram || 0,
+        price: variant.price || "",
         compare_at_price: variant.compare_at_price || "",
-        stock_quantity: variant.stock_quantity,
-        reserved_quantity: variant.reserved_quantity,
+        stock_quantity: variant.stock_quantity || 0,
+        reserved_quantity: variant.reserved_quantity || 0,
         barcode: variant.barcode || "",
         images: imageUrls,
     };
@@ -100,6 +99,49 @@ const closeModal = () => {
     showModal.value = false;
     editingVariant.value = null;
     tempImagePaths.value = [];
+};
+
+// Auto-generate SKU & Barcode
+const generating = ref(false);
+
+const generateSkuBarcode = async () => {
+    if (!editingVariant.value?.id) {
+        showError("Please save the variant first before generating SKU & Barcode");
+        return;
+    }
+
+    try {
+        generating.value = true;
+
+        const response = await $fetch<{
+            status: boolean;
+            statusCode: string;
+            message: string;
+            data: {
+                variant_id: number;
+                sku: string;
+                barcode: string;
+                sku_format: string;
+                barcode_type: string;
+            };
+        }>(`/catalog/products/variants/${editingVariant.value.id}/generate-sku-barcode`, {
+            method: "POST",
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+        });
+
+        // Update form with generated SKU & Barcode
+        form.value.sku = response.data.sku;
+        form.value.barcode = response.data.barcode;
+
+        success(`SKU & Barcode generated! Format: ${response.data.sku_format}, ${response.data.barcode_type}`);
+    } catch (err: any) {
+        showError(err?.data?.message || "Failed to generate SKU & Barcode");
+    } finally {
+        generating.value = false;
+    }
 };
 
 // Handle multiple image upload
@@ -115,14 +157,8 @@ const handleImageUpload = async (event: Event) => {
         // Generate alt_text: Product Name - SKU
         const altText = `${props.productName} - ${form.value.sku}`;
 
-        console.log('=== Upload Variant Images ===');
-        console.log('Files:', fileArray.map(f => ({ name: f.name, size: f.size })));
-        console.log('Alt Text:', altText);
-
         // If editing existing variant, upload directly to variant
         if (editingVariant.value) {
-            console.log('Mode: Edit existing variant');
-            console.log('Variant ID:', editingVariant.value.id);
 
             const formData = new FormData();
             fileArray.forEach((file) => {
@@ -131,13 +167,6 @@ const handleImageUpload = async (event: Event) => {
             formData.append("type", "variant");
             formData.append("variant_id", editingVariant.value!.id.toString());
             formData.append("alt_text", altText);
-
-            console.log('FormData contents:', {
-                type: 'variant',
-                variant_id: editingVariant.value.id,
-                alt_text: altText,
-                files_count: fileArray.length
-            });
 
             const response = await $fetch("/upload/temp", {
                 method: "POST",
@@ -148,8 +177,6 @@ const handleImageUpload = async (event: Event) => {
                 body: formData,
             });
 
-            console.log('Upload response:', response);
-
             const data = (response as any).data;
             if (data.images && data.images.length > 0) {
                 // Add uploaded images to form
@@ -159,8 +186,6 @@ const handleImageUpload = async (event: Event) => {
                 success(`${data.count} image(s) uploaded successfully!`);
             }
         } else {
-            console.log('Mode: New variant (temp upload)');
-            console.log('Session ID:', sessionId.value || 'Will be generated');
 
             const formData = new FormData();
             fileArray.forEach((file) => {
@@ -172,13 +197,6 @@ const handleImageUpload = async (event: Event) => {
                 formData.append("session_id", sessionId.value);
             }
 
-            console.log('FormData contents:', {
-                type: 'variant',
-                alt_text: altText,
-                session_id: sessionId.value || 'auto-generate',
-                files_count: fileArray.length
-            });
-
             // Upload to temp folder for new variant
             const response = await $fetch("/upload/temp", {
                 method: "POST",
@@ -189,12 +207,9 @@ const handleImageUpload = async (event: Event) => {
                 body: formData,
             });
 
-            console.log('Upload response:', response);
-
             const data = (response as any).data;
             if (!sessionId.value && data.session_id) {
                 sessionId.value = data.session_id;
-                console.log('Session ID received:', data.session_id);
             }
 
             if (data.images && data.images.length > 0) {
@@ -202,7 +217,6 @@ const handleImageUpload = async (event: Event) => {
                     tempImagePaths.value.push({ url: img.url, path: img.path });
                     form.value.images.push(img.url);
                 });
-                console.log('Images added to form:', data.images.length);
                 success(`${data.count} image(s) uploaded successfully!`);
             }
         }
@@ -227,8 +241,14 @@ const removeImage = (index: number) => {
 
 // Save variant (add or update)
 const saveVariant = async () => {
-    if (!form.value.sku || !form.value.size || !form.value.color || !form.value.price) {
-        showError("Please fill all required fields");
+    // For edit mode, SKU is required. For add mode, SKU will be auto-generated if empty
+    if (editingVariant.value && !form.value.sku) {
+        showError("SKU is required");
+        return;
+    }
+
+    if (!form.value.size || !form.value.color || !form.value.price) {
+        showError("Please fill all required fields (Size, Color, Price)");
         return;
     }
 
@@ -271,9 +291,6 @@ const saveVariant = async () => {
             success("Variant updated successfully!");
         } else {
             // Create new variant
-            console.log('=== Create Variant API Request ===');
-            console.log('Product ID:', props.productId);
-            console.log('Images to send:', form.value.images);
 
             const requestBody = {
                 product_id: props.productId,
@@ -289,8 +306,6 @@ const saveVariant = async () => {
                 images: form.value.images.length > 0 ? form.value.images : undefined,
             };
 
-            console.log('Request body:', requestBody);
-
             const response = await $fetch("/catalog/products/variants", {
                 method: "POST",
                 baseURL: useRuntimeConfig().public.apiBase,
@@ -299,11 +314,6 @@ const saveVariant = async () => {
                 },
                 body: requestBody,
             });
-
-            console.log('=== Create Variant API Response ===');
-            console.log('Full response:', response);
-            console.log('Variant data:', (response as any).data);
-            console.log('Variant images:', (response as any).data?.images);
 
             // Add to local state with response data
             const newVariant = (response as any).data;
@@ -314,10 +324,39 @@ const saveVariant = async () => {
             } else {
                 console.log('✓ Images found in response:', newVariant.images.length);
             }
+
+            // Auto-generate SKU & Barcode for newly created variant
+            if (newVariant.id && (!form.value.sku || !form.value.barcode)) {
+                try {
+                    const genResponse = await $fetch<{
+                        status: boolean;
+                        data: {
+                            sku: string;
+                            barcode: string;
+                            sku_format: string;
+                            barcode_type: string;
+                        };
+                    }>(`/catalog/products/variants/${newVariant.id}/generate-sku-barcode`, {
+                        method: "POST",
+                        baseURL: useRuntimeConfig().public.apiBase,
+                        headers: {
+                            Authorization: `Bearer ${useAuthStore().token}`,
+                        },
+                    });
+
+                    // Update newVariant with generated SKU & Barcode
+                    newVariant.sku = genResponse.data.sku;
+                    newVariant.barcode = genResponse.data.barcode;
+                } catch (genErr) {
+                    console.warn('⚠️ Failed to auto-generate SKU & Barcode:', genErr);
+                    // Continue anyway, variant is already created
+                }
+            }
+
             variants.value.push(newVariant);
 
             // Clear session ID and temp paths after successful creation
-            sessionId.value = null;
+            sessionId.value = "";
             tempImagePaths.value = [];
 
             // Emit event to parent
@@ -480,41 +519,74 @@ const formatPrice = (price: string | number) => {
 
                 <div class="mt-4 space-y-4">
                     <!-- SKU & Barcode -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                            <label class="fieldset-label" for="sku">
-                                SKU <span class="text-error">*</span>
-                            </label>
-                            <input
-                                id="sku"
-                                v-model="form.sku"
-                                type="text"
-                                class="input input-sm w-full"
-                                placeholder="e.g., PRD-001-S-BLK" />
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium">SKU & Barcode</span>
+                            <button
+                                v-if="editingVariant"
+                                type="button"
+                                @click="generateSkuBarcode"
+                                class="btn btn-primary btn-xs"
+                                :disabled="generating">
+                                <span v-if="generating" class="loading loading-spinner loading-xs"></span>
+                                <span v-else class="iconify lucide--sparkles size-3" />
+                                {{ generating ? "Generating..." : "Auto Generate" }}
+                            </button>
+                            <span v-else class="text-xs text-info flex items-center gap-1">
+                                <span class="iconify lucide--info size-3" />
+                                Will auto-generate if left empty
+                            </span>
                         </div>
-                        <div class="space-y-2">
-                            <label class="fieldset-label" for="barcode">Barcode</label>
-                            <input
-                                id="barcode"
-                                v-model="form.barcode"
-                                type="text"
-                                class="input input-sm w-full"
-                                placeholder="e.g., 9789850279295" />
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label class="fieldset-label" for="sku">
+                                    SKU <span v-if="editingVariant" class="text-error">*</span>
+                                    <span v-else class="text-xs text-base-content/60">(optional)</span>
+                                </label>
+                                <input
+                                    id="sku"
+                                    v-model="form.sku"
+                                    type="text"
+                                    class="input input-sm w-full"
+                                    :placeholder="editingVariant ? 'e.g., PRD-001-S-BLK' : 'Leave empty to auto-generate'"
+                                    :readonly="generating" />
+                            </div>
+                            <div class="space-y-2">
+                                <label class="fieldset-label" for="barcode">
+                                    Barcode <span class="text-xs text-base-content/60">(optional)</span>
+                                </label>
+                                <input
+                                    id="barcode"
+                                    v-model="form.barcode"
+                                    type="text"
+                                    class="input input-sm w-full"
+                                    :placeholder="editingVariant ? 'e.g., 9789850279295' : 'Leave empty to auto-generate'"
+                                    :readonly="generating" />
+                            </div>
                         </div>
                     </div>
 
                     <!-- Size & Color -->
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
-                            <label class="fieldset-label" for="size">
+                            <label class="fieldset-label">
                                 Size <span class="text-error">*</span>
                             </label>
-                            <input
-                                id="size"
-                                v-model="form.size"
-                                type="text"
-                                class="input input-sm w-full"
-                                placeholder="e.g., 5-6 Tahun" />
+                            <div class="grid grid-cols-2 gap-2">
+                                <label
+                                    v-for="sizeOption in ['5-6', '7-8', '9-10', '11-12']"
+                                    :key="sizeOption"
+                                    class="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-2 rounded-lg border border-base-300"
+                                    :class="{ 'bg-primary/10 border-primary': form.size === sizeOption }">
+                                    <input
+                                        type="radio"
+                                        name="size"
+                                        :value="sizeOption"
+                                        v-model="form.size"
+                                        class="radio radio-primary radio-sm" />
+                                    <span class="text-sm">{{ sizeOption }}</span>
+                                </label>
+                            </div>
                         </div>
                         <div class="space-y-2">
                             <label class="fieldset-label" for="color">

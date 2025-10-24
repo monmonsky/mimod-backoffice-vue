@@ -10,6 +10,7 @@ export const useBrands = () => {
         if (params?.per_page) query.append("per_page", params.per_page.toString());
         if (params?.search) query.append("search", params.search);
         if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
+        if (params?.status) query.append("status", params.status);
 
         const queryString = query.toString();
         const url = `/catalog/brands${queryString ? `?${queryString}` : ""}`;

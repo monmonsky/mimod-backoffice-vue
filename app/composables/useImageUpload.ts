@@ -47,6 +47,12 @@ export interface MoveImageRequest {
     type: string;
     product_id?: number;
     variant_id?: number;
+    metadata?: Array<{
+        media_type: string;
+        duration?: number;
+        file_size?: number;
+        thumbnail_url?: string;
+    }>;
 }
 
 export interface MoveImageResponse {
@@ -226,14 +232,14 @@ export const useImageUpload = () => {
             // Validate file type
             if (!allowedTypes.includes(file.type)) {
                 const allowedExtensions = allowedTypes.map((type) => type.split("/")[1]).join(", ");
-                throw new Error(`Please upload valid image files (${allowedExtensions})`);
+                throw new Error(`Please upload valid files (${allowedExtensions})`);
             }
 
             // Validate file size (per file)
             const maxSizeBytes = maxSizeMB * 1024 * 1024;
             if (file.size > maxSizeBytes) {
                 const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                throw new Error(`File "${file.name}" is ${fileSizeMB}MB. Each image must be less than ${maxSizeMB}MB`);
+                throw new Error(`File "${file.name}" is ${fileSizeMB}MB. Each file must be less than ${maxSizeMB}MB`);
             }
         }
 

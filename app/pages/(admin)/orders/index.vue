@@ -6,9 +6,9 @@ definePageMeta({
     middleware: "auth",
 });
 
-useHead({
-    title: "Orders",
-});
+// Set page title from admin menu
+const { setPageTitleFromMenu } = useAdminMenu();
+setPageTitleFromMenu();
 
 // Statistics will be passed from OrdersTable via emit
 const statistics = ref({

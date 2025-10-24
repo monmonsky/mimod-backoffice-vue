@@ -9,6 +9,10 @@ definePageMeta({
     middleware: "auth",
 });
 
+// Set page title from admin menu
+const { setPageTitleFromMenu } = useAdminMenu();
+setPageTitleFromMenu();
+
 const route = useRoute();
 const router = useRouter();
 

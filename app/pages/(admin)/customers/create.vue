@@ -38,10 +38,6 @@ const handleSubmit = async () => {
             preferences: JSON.stringify(form.value.preferences),
         };
 
-        console.log("=== DEBUG CREATE CUSTOMER ===");
-        console.log("Form Data:", JSON.stringify(data, null, 2));
-        console.log("============================");
-
         await createCustomer(data);
         success("Customer created successfully!");
 

@@ -80,6 +80,23 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         ],
     },
     {
+        id: "appearance-label",
+        isTitle: true,
+        label: "Appearance",
+    },
+    {
+        id: "appearance",
+        icon: "lucide--palette",
+        label: "Appearance",
+        children: [
+            {
+                id: "appearance-navigation",
+                label: "Navigation",
+                url: "/appearance/navigation",
+            },
+        ],
+    },
+    {
         id: "access-control-label",
         isTitle: true,
         label: "Access Control",

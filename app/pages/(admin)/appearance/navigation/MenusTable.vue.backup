@@ -1,0 +1,529 @@
+<script setup lang="ts">
+import CreateEditMenuModal from "./CreateEditMenuModal.vue";
+import BulkCreateCategoriesModal from "./BulkCreateCategoriesModal.vue";
+import type { Menu } from "~/types/appearance/navigation";
+
+const emit = defineEmits<{
+    'update:statistics': [stats: any]
+}>();
+
+const { deleteMenu, reorderMenus } = useMenus();
+const { success, error: showError } = useToast();
+const config = useRuntimeConfig();
+const authStore = useAuthStore();
+
+// Filters
+const location = ref("");
+const linkType = ref("");
+const status = ref("");
+const search = ref("");
+const page = ref(1);
+const per_page = ref(50);
+
+// Build params reactively
+const params = computed(() => {
+    const filters: Record<string, any> = {
+        page: page.value,
+        per_page: per_page.value,
+    };
+
+    if (location.value) filters.location = location.value;
+    if (linkType.value) filters.link_type = linkType.value;
+    if (status.value) filters.status = status.value;
+    if (search.value) filters.search = search.value;
+
+    return filters;
+});
+
+// Fetch menus - Direct fetch to avoid circular dependency
+const { data: menusResponse, pending, refresh, error: fetchError } = await useAsyncData(
+    "menus",
+    () =>
+        $fetch("/appearance/navigation/menus", {
+            baseURL: config.public.apiBase,
+            headers: {
+                Authorization: `Bearer ${authStore.token}`,
+            },
+            params: params.value,
+        }),
+    {
+        watch: [page, per_page, location, linkType, status, search],
+    }
+);
+
+const menus = computed(() => {
+    const response = menusResponse.value as any;
+    // Backend returns: { data: { data: [...menus], current_page, ... } }
+    return response?.data?.data || [];
+});
+
+const statistics = computed(() => {
+    const response = menusResponse.value as any;
+    // Statistics might be in response.data.statistics or we calculate from data
+    const stats = response?.data?.statistics || {
+        total_menus: response?.data?.total || 0,
+        active_menus: 0,
+        inactive_menus: 0,
+        header_menus: 0,
+        footer_menus: 0,
+        mobile_menus: 0,
+        parent_menus: 0,
+        child_menus: 0,
+    };
+    return stats;
+});
+
+const pagination = computed(() => {
+    const response = menusResponse.value as any;
+    const paginationData = response?.data;
+    return {
+        current_page: paginationData?.current_page || 1,
+        last_page: paginationData?.last_page || 1,
+        per_page: paginationData?.per_page || 50,
+        total: paginationData?.total || 0,
+        from: paginationData?.from || 0,
+        to: paginationData?.to || 0,
+    };
+});
+
+// Emit statistics to parent component
+watch(statistics, (newStats) => {
+    emit('update:statistics', newStats);
+}, { immediate: true });
+
+// Pagination
+const goToPage = (pageNum: number) => {
+    page.value = pageNum;
+};
+
+// Watch search with debounce
+watch(search, () => {
+    setTimeout(() => {
+        page.value = 1;
+    }, 500);
+});
+
+// Watch filters - reset to page 1
+watch([location, linkType, status], () => {
+    page.value = 1;
+});
+
+// Modals
+const showCreateModal = ref(false);
+const showEditModal = ref(false);
+const showBulkCreateModal = ref(false);
+const selectedMenu = ref<Menu | null>(null);
+
+const openCreateModal = () => {
+    selectedMenu.value = null;
+    showCreateModal.value = true;
+};
+
+const openEditModal = (menu: Menu) => {
+    selectedMenu.value = menu;
+    showEditModal.value = true;
+};
+
+const openBulkCreateModal = () => {
+    showBulkCreateModal.value = true;
+};
+
+const handleMenuSaved = () => {
+    refresh();
+    showCreateModal.value = false;
+    showEditModal.value = false;
+    showBulkCreateModal.value = false;
+};
+
+// Delete menu
+const confirmDelete = ref(false);
+const menuToDelete = ref<number | null>(null);
+
+const openDeleteModal = (id: number) => {
+    menuToDelete.value = id;
+    confirmDelete.value = true;
+};
+
+const handleDelete = async () => {
+    if (!menuToDelete.value) return;
+
+    try {
+        await deleteMenu(menuToDelete.value);
+        success("Menu deleted successfully!");
+        confirmDelete.value = false;
+        menuToDelete.value = null;
+        refresh();
+    } catch (err: any) {
+        showError(err?.data?.message || "Failed to delete menu");
+    }
+};
+
+// Drag and drop for reordering
+const draggedItem = ref<Menu | null>(null);
+const draggedOverItem = ref<Menu | null>(null);
+
+const onDragStart = (menu: Menu) => {
+    draggedItem.value = menu;
+};
+
+const onDragOver = (e: DragEvent, menu: Menu) => {
+    e.preventDefault();
+    draggedOverItem.value = menu;
+};
+
+const onDrop = async (e: DragEvent) => {
+    e.preventDefault();
+
+    if (!draggedItem.value || !draggedOverItem.value) return;
+    if (draggedItem.value.id === draggedOverItem.value.id) return;
+
+    try {
+        const draggedIndex = menus.value.findIndex((m: Menu) => m.id === draggedItem.value?.id);
+        const targetIndex = menus.value.findIndex((m: Menu) => m.id === draggedOverItem.value?.id);
+
+        // Create new order array
+        const orders = menus.value.map((menu: Menu, index: number) => {
+            let newOrder = index + 1;
+
+            if (index === targetIndex) {
+                newOrder = draggedIndex + 1;
+            } else if (draggedIndex < targetIndex && index > draggedIndex && index <= targetIndex) {
+                newOrder = index;
+            } else if (draggedIndex > targetIndex && index >= targetIndex && index < draggedIndex) {
+                newOrder = index + 2;
+            }
+
+            return {
+                id: menu.id,
+                order: newOrder
+            };
+        });
+
+        await reorderMenus({ orders });
+        success("Menu order updated successfully!");
+        refresh();
+    } catch (err: any) {
+        showError(err?.data?.message || "Failed to reorder menus");
+    } finally {
+        draggedItem.value = null;
+        draggedOverItem.value = null;
+    }
+};
+
+// Helper functions
+const getLinkTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+        static: "Static URL",
+        category: "Category",
+        product: "Product",
+        brand: "Brand",
+        external: "External",
+    };
+    return labels[type] || type;
+};
+
+const getLinkTypeClass = (type: string) => {
+    const classes: Record<string, string> = {
+        static: "badge-primary",
+        category: "badge-secondary",
+        product: "badge-accent",
+        brand: "badge-info",
+        external: "badge-warning",
+    };
+    return classes[type] || "badge-ghost";
+};
+
+const getLocationBadges = (menuLocations: any) => {
+    if (!menuLocations) return [];
+    if (Array.isArray(menuLocations)) {
+        return menuLocations.map(ml => ml.location || ml);
+    }
+    // If it's a string (comma-separated), split it
+    if (typeof menuLocations === 'string') {
+        return menuLocations.split(',').map(l => l.trim());
+    }
+    return [];
+};
+
+const getLocationClass = (location: string) => {
+    const classes: Record<string, string> = {
+        header: "badge-primary",
+        footer: "badge-secondary",
+        mobile: "badge-accent",
+    };
+    return classes[location] || "badge-ghost";
+};
+</script>
+
+<template>
+    <div>
+        <!-- Table Card -->
+        <div class="card bg-base-100 shadow">
+            <div class="card-body p-0">
+                <!-- Filters & Actions -->
+                <div class="px-5 pt-5 pb-4 space-y-4">
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div class="inline-flex items-center gap-3 flex-wrap">
+                            <label class="input input-sm">
+                                <span class="iconify lucide--search text-base-content/80 size-3.5" />
+                                <input
+                                    v-model="search"
+                                    type="search"
+                                    class="w-24 sm:w-48"
+                                    placeholder="Search menus..."
+                                    aria-label="Search menus" />
+                            </label>
+                            <select v-model="location" class="select select-sm w-32">
+                                <option value="">All Locations</option>
+                                <option value="header">Header</option>
+                                <option value="footer">Footer</option>
+                                <option value="mobile">Mobile</option>
+                            </select>
+                            <select v-model="linkType" class="select select-sm w-32">
+                                <option value="">All Types</option>
+                                <option value="static">Static</option>
+                                <option value="category">Category</option>
+                                <option value="product">Product</option>
+                                <option value="brand">Brand</option>
+                                <option value="external">External</option>
+                            </select>
+                            <select v-model="status" class="select select-sm w-28">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="inline-flex items-center gap-2">
+                            <button
+                                @click="openBulkCreateModal"
+                                class="btn btn-secondary btn-sm max-sm:btn-square">
+                                <span class="iconify lucide--list-plus size-4" />
+                                <span class="hidden sm:inline">Bulk Add</span>
+                            </button>
+                            <button
+                                @click="openCreateModal"
+                                class="btn btn-primary btn-sm max-sm:btn-square">
+                                <span class="iconify lucide--plus size-4" />
+                                <span class="hidden sm:inline">Add Menu</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div v-if="pending" class="flex items-center justify-center py-12">
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+
+                <!-- Error -->
+                <div v-else-if="fetchError" class="flex flex-col items-center justify-center py-12 px-4">
+                    <span class="iconify lucide--alert-circle size-12 text-error mb-4" />
+                    <p class="text-lg font-semibold mb-2">Failed to load menus</p>
+                    <p class="text-sm text-base-content/60 mb-4">{{ fetchError.message || 'An error occurred' }}</p>
+                    <button @click="() => refresh()" class="btn btn-primary btn-sm">
+                        <span class="iconify lucide--refresh-cw size-4" />
+                        Retry
+                    </button>
+                </div>
+
+                <!-- Table -->
+                <div v-else class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th class="w-8"></th>
+                                <th>Title</th>
+                                <th>Link Type</th>
+                                <th>URL / Target</th>
+                                <th>Parent</th>
+                                <th>Locations</th>
+                                <th>Order</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="menu in menus"
+                                :key="menu.id"
+                                draggable="true"
+                                @dragstart="onDragStart(menu)"
+                                @dragover="(e) => onDragOver(e, menu)"
+                                @drop="onDrop"
+                                :class="{ 'bg-base-200': draggedOverItem?.id === menu.id }"
+                                class="cursor-move hover:bg-base-200/50">
+                                <td>
+                                    <span class="iconify lucide--grip-vertical size-4 text-base-content/40" />
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span v-if="menu.parent_id" class="iconify lucide--corner-down-right size-3 text-base-content/40" />
+                                        <div>
+                                            <p class="font-medium">{{ menu.title }}</p>
+                                            <div v-if="menu.has_children" class="flex items-center gap-1 mt-1">
+                                                <span class="iconify lucide--folder size-3 text-primary" />
+                                                <span class="text-xs text-base-content/60">Has children</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm" :class="getLinkTypeClass(menu.link_type)">
+                                        {{ getLinkTypeLabel(menu.link_type) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex flex-col max-w-xs">
+                                        <template v-if="menu.link_type === 'static' || menu.link_type === 'external'">
+                                            <span class="text-sm truncate">{{ menu.url }}</span>
+                                        </template>
+                                        <template v-else-if="menu.link_type === 'category' && menu.category">
+                                            <span class="text-sm">{{ menu.category.name }}</span>
+                                            <span class="text-xs text-base-content/60">/category/{{ menu.category.slug }}</span>
+                                        </template>
+                                        <template v-else-if="menu.link_type === 'product' && menu.product">
+                                            <span class="text-sm">{{ menu.product.name }}</span>
+                                            <span class="text-xs text-base-content/60">/product/{{ menu.product.slug }}</span>
+                                        </template>
+                                        <template v-else-if="menu.link_type === 'brand' && menu.brand">
+                                            <span class="text-sm">{{ menu.brand.name }}</span>
+                                            <span class="text-xs text-base-content/60">/brand/{{ menu.brand.slug }}</span>
+                                        </template>
+                                        <template v-else>
+                                            <span class="text-sm text-base-content/40">-</span>
+                                        </template>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span v-if="menu.parent_id" class="text-sm text-base-content/60">
+                                        {{ menus.find((m: Menu) => m.id === menu.parent_id)?.title || '-' }}
+                                    </span>
+                                    <span v-else class="text-sm text-base-content/40">Root</span>
+                                </td>
+                                <td>
+                                    <div class="flex flex-wrap gap-1">
+                                        <span
+                                            v-for="loc in getLocationBadges(menu.menu_locations)"
+                                            :key="loc"
+                                            class="badge badge-xs"
+                                            :class="getLocationClass(loc)">
+                                            {{ loc }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm badge-outline">{{ menu.order }}</span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <span class="badge badge-sm" :class="menu.is_active ? 'badge-success' : 'badge-ghost'">
+                                            {{ menu.is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                        <span
+                                            v-if="!menu.is_clickable"
+                                            class="badge badge-sm badge-outline"
+                                            title="Not clickable">
+                                            <span class="iconify lucide--mouse-pointer-click size-3" />
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex justify-end items-center gap-2">
+                                        <button @click="openEditModal(menu)" class="btn btn-ghost btn-xs">
+                                            <span class="iconify lucide--pencil size-4" />
+                                        </button>
+                                        <button @click="openDeleteModal(menu.id)" class="btn btn-ghost btn-xs text-error">
+                                            <span class="iconify lucide--trash-2 size-4" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="menus.length === 0">
+                                <td colspan="9" class="text-center">No menus found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="pagination" class="flex items-center justify-between p-6">
+                    <div class="text-base-content/80 hover:text-base-content flex gap-2 text-sm">
+                        <span class="hidden sm:inline">Per page</span>
+                        <select v-model="per_page" class="select select-xs w-18" aria-label="Per page">
+                            <option :value="20">20</option>
+                            <option :value="50">50</option>
+                            <option :value="100">100</option>
+                        </select>
+                    </div>
+                    <span class="text-base-content/80 hidden text-sm lg:inline">
+                        Showing
+                        <span class="text-base-content font-medium">{{ pagination.from }} to {{ pagination.to }}</span>
+                        of {{ pagination.total }} items
+                    </span>
+                    <div class="inline-flex items-center gap-1">
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Prev"
+                            :disabled="pagination.current_page === 1"
+                            @click="goToPage(pagination.current_page - 1)">
+                            <span class="iconify lucide--chevron-left" />
+                        </button>
+                        <button
+                            v-for="pageNum in pagination.last_page"
+                            :key="pageNum"
+                            v-show="Math.abs(pageNum - pagination.current_page) < 3 || pageNum === 1 || pageNum === pagination.last_page"
+                            :class="[
+                                'btn btn-circle sm:btn-sm btn-xs',
+                                pageNum === pagination.current_page ? 'btn-primary' : 'btn-ghost',
+                            ]"
+                            @click="goToPage(pageNum)">
+                            {{ pageNum }}
+                        </button>
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Next"
+                            :disabled="pagination.current_page === pagination.last_page"
+                            @click="goToPage(pagination.current_page + 1)">
+                            <span class="iconify lucide--chevron-right" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Modal -->
+        <CreateEditMenuModal
+            v-if="showCreateModal"
+            :menu="null"
+            @close="showCreateModal = false"
+            @saved="handleMenuSaved" />
+
+        <!-- Edit Modal -->
+        <CreateEditMenuModal
+            v-if="showEditModal && selectedMenu"
+            :menu="selectedMenu"
+            @close="showEditModal = false"
+            @saved="handleMenuSaved" />
+
+        <!-- Bulk Create Modal -->
+        <BulkCreateCategoriesModal
+            v-if="showBulkCreateModal"
+            @close="showBulkCreateModal = false"
+            @saved="handleMenuSaved" />
+
+        <!-- Delete Confirmation Modal -->
+        <dialog :open="confirmDelete" class="modal">
+            <div class="modal-box">
+                <h3 class="text-lg font-bold">Delete Menu</h3>
+                <p class="py-4">Are you sure you want to delete this menu? This action cannot be undone.</p>
+                <div class="modal-action">
+                    <button class="btn btn-ghost" @click="confirmDelete = false">Cancel</button>
+                    <button class="btn btn-error" @click="handleDelete">Delete</button>
+                </div>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button @click="confirmDelete = false">close</button>
+            </form>
+        </dialog>
+    </div>
+</template>

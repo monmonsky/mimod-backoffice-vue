@@ -4,6 +4,10 @@ definePageMeta({
     middleware: "auth",
 });
 
+// Set page title from admin menu
+const { setPageTitleFromMenu } = useAdminMenu();
+setPageTitleFromMenu();
+
 const { getStatistics } = useDashboard();
 
 const { data: statsResponse, pending: loadingStats } = await getStatistics();

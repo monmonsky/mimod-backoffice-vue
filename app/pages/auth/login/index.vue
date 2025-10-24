@@ -48,7 +48,9 @@ const handleLogin = async () => {
 
         if (data.status && data.data.token) {
             // Store token and user
-            authStore.setToken(data.data.token);
+            // Backend should return expires_in (in seconds), if not default to 24 hours
+            const expiresIn = data.data.expires_in || data.data.token_expires_in;
+            authStore.setToken(data.data.token, expiresIn);
             authStore.setUser(data.data.user);
 
             success("Login successful!");

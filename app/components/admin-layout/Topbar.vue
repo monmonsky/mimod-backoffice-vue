@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import TopbarLanguageMenu from "./TopbarLanguageMenu.vue";
 import TopbarNotificationButton from "./TopbarNotificationButton.vue";
 import TopbarProfileMenu from "./TopbarProfileMenu.vue";
 import TopbarSearchButton from "./TopbarSearchButton.vue";
@@ -17,13 +16,12 @@ import TopbarSearchButton from "./TopbarSearchButton.vue";
             <TopbarSearchButton />
         </div>
         <div class="inline-flex items-center gap-0.5">
-            <TopbarLanguageMenu />
-            <ThemeToggle class="btn btn-sm btn-circle btn-ghost" />
-            <label for="layout-rightbar-drawer" class="btn btn-circle btn-ghost btn-sm drawer-button">
-                <span class="iconify lucide--settings-2 size-4.5" />
-            </label>
-            <TopbarNotificationButton />
-            <TopbarProfileMenu />
+                <TopbarNotificationButton />
+                <ThemeToggle class="btn btn-sm btn-circle btn-ghost" />
+                <label for="layout-rightbar-drawer" class="btn btn-circle btn-ghost btn-sm drawer-button">
+                    <span class="iconify lucide--settings-2 size-4.5" />
+                </label>
+                <TopbarProfileMenu />
         </div>
     </div>
 </template>

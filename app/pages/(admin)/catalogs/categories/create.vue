@@ -81,11 +81,6 @@ const handleFileUpload = async (event: Event) => {
         formData.append("image", file);
         formData.append("type", "category"); // Type: category
 
-        console.log("=== UPLOAD IMAGE ===");
-        console.log("File:", file.name, file.type, formatFileSize(file.size));
-        console.log("Type: category");
-        console.log("===================");
-
         const response = (await $fetch("/upload/image", {
             baseURL: useRuntimeConfig().public.apiBase,
             method: "POST",
@@ -94,10 +89,6 @@ const handleFileUpload = async (event: Event) => {
             },
             body: formData,
         })) as any;
-
-        console.log("=== UPLOAD RESPONSE ===");
-        console.log("Response:", response);
-        console.log("======================");
 
         form.value.image = response.data.url;
         imagePreview.value = response.data.url;
@@ -120,10 +111,6 @@ const removeImage = () => {
 const handleSubmit = async () => {
     try {
         loading.value = true;
-
-        console.log("=== DEBUG CREATE CATEGORY ===");
-        console.log("Form Data:", JSON.stringify(form.value, null, 2));
-        console.log("============================");
 
         await createCategory(form.value);
         success("Category created successfully!");

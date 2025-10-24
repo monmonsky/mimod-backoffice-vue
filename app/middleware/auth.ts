@@ -1,8 +1,11 @@
 export default defineNuxtRouteMiddleware((to, from) => {
     const authStore = useAuthStore();
 
-    // If not authenticated, redirect to login
-    if (!authStore.isAuthenticated) {
+    // Check authentication validity (includes token expiry check)
+    const isValid = authStore.checkAuth();
+
+    // If not authenticated or token expired, redirect to login
+    if (!isValid) {
         return navigateTo({
             path: "/auth/login",
             query: { redirect: to.fullPath },

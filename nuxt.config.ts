@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+    // @ts-ignore - i18n module config
     app: {
         head: {
             titleTemplate: "%s - Nexus Admin",
@@ -11,10 +12,37 @@ export default defineNuxtConfig({
             },
         },
     },
+    experimental: {
+        appManifest: false,
+    },
     compatibilityDate: "2025-05-05",
     devtools: { enabled: true },
-    modules: ["@pinia/nuxt", "@nuxt/eslint"],
+    modules: ["@pinia/nuxt", "@nuxt/eslint", "@nuxtjs/i18n"],
     css: ["~/assets/styles/app.css"],
+    i18n: {
+        locales: [
+            {
+                code: "en",
+                iso: "en-US",
+                name: "English",
+                file: "en.ts",
+            },
+            {
+                code: "id",
+                iso: "id-ID",
+                name: "Indonesia",
+                file: "id.ts",
+            },
+        ],
+        langDir: "locales",
+        defaultLocale: "en",
+        strategy: "prefix_except_default",
+        detectBrowserLanguage: {
+            useCookie: true,
+            cookieKey: "i18n_redirected",
+            redirectOn: "root",
+        },
+    },
     vite: {
         plugins: [tailwindcss()],
     },

@@ -24,15 +24,35 @@ export const useAuthStore = defineStore("auth", () => {
         default: () => null,
     });
 
+    const tokenExpiry = useCookie<number | null>("auth_token_expiry", {
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        default: () => null,
+    });
+
     // User is authenticated if both token AND user exist
     const isAuthenticated = computed(() => !!token.value && !!user.value);
 
-    const setToken = (newToken: string) => {
+    // Check if token is expired based on stored expiry time
+    const isTokenExpired = computed(() => {
+        if (!tokenExpiry.value) return false;
+        return Date.now() >= tokenExpiry.value;
+    });
+
+    const setToken = (newToken: string, expiresIn?: number) => {
         token.value = newToken;
+
+        // Set token expiry time (default: 1 hour from now to match backend)
+        // expiresIn is in seconds (from backend), convert to milliseconds
+        const expiryDuration = expiresIn ? expiresIn * 1000 : 60 * 60 * 1000; // 1 hour default
+        tokenExpiry.value = Date.now() + expiryDuration;
     };
 
     const setUser = (userData: User) => {
         user.value = userData;
+    };
+
+    const setTokenExpiry = (expiryTimestamp: number) => {
+        tokenExpiry.value = expiryTimestamp;
     };
 
     const logout = async () => {
@@ -51,9 +71,10 @@ export const useAuthStore = defineStore("auth", () => {
             console.error("Logout API error:", err);
         }
 
-        // Clear local state (both cookies)
+        // Clear local state (all cookies)
         token.value = null;
         user.value = null;
+        tokenExpiry.value = null;
 
         // Redirect to login - check if we're in browser
         if (import.meta.client) {
@@ -61,12 +82,31 @@ export const useAuthStore = defineStore("auth", () => {
         }
     };
 
+    // Check authentication validity (for middleware)
+    const checkAuth = () => {
+        // If not authenticated, return false
+        if (!isAuthenticated.value) return false;
+
+        // If token is expired, logout and return false
+        if (isTokenExpired.value) {
+            console.warn('[Auth Store] Token expired - Auto logout');
+            logout();
+            return false;
+        }
+
+        return true;
+    };
+
     return {
         token,
         user,
+        tokenExpiry,
         isAuthenticated,
+        isTokenExpired,
         setToken,
         setUser,
+        setTokenExpiry,
         logout,
+        checkAuth,
     };
 });

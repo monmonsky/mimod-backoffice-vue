@@ -14,12 +14,6 @@ const { data: customerResponse, pending } = getCustomer(customerId);
 
 const customer = computed(() => {
     const response = customerResponse.value as any;
-    console.log("=== SHOW CUSTOMER RESPONSE ===");
-    console.log("Full Response:", response);
-    console.log("response?.data:", response?.data);
-    console.log("response?.data?.customer:", response?.data?.customer);
-    console.log("==============================");
-
     // Try different response structures
     return response?.data?.customer || response?.data || null;
 });

@@ -5,6 +5,7 @@ definePageMeta({
     layout: "admin",
 });
 
+const { t } = useI18n();
 const { createProduct } = useProducts();
 const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
@@ -28,8 +29,15 @@ const form = ref({
     },
 });
 
-// Store temp images data
-const tempImages = ref<Array<{ url: string; path: string }>>([]);
+// Store temp media data (images + videos)
+const tempMedia = ref<Array<{
+    url: string;
+    path: string;
+    media_type: string;
+    thumbnail_url?: string;
+    duration?: number;
+    file_size?: number;
+}>>([]);
 const sessionId = ref<string>("");
 
 const tagInput = ref("");
@@ -88,7 +96,7 @@ const handleTagKeydown = (event: KeyboardEvent) => {
     }
 };
 
-// Handle file upload to temp
+// Handle file upload to temp (images + video)
 const handleFileUpload = async (event: Event) => {
     const target = event.target as HTMLInputElement;
     const files = target.files;
@@ -99,31 +107,61 @@ const handleFileUpload = async (event: Event) => {
         uploading.value = true;
         const fileArray = Array.from(files);
 
-        // Upload to temp folder
-        const response = await uploadTempImages(fileArray, { type: "product", maxSizeMB: 10 }, sessionId.value);
+        // Upload to temp folder (API handles both images and video)
+        const response = await uploadTempImages(
+            fileArray,
+            {
+                type: "product",
+                maxSizeMB: 100,
+                allowedTypes: [
+                    "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+                    "video/mp4", "video/quicktime", "video/x-msvideo"
+                ]
+            },
+            sessionId.value
+        );
 
         // Store session ID for future uploads
         if (!sessionId.value) {
             sessionId.value = response.data.session_id;
         }
 
-        // Store temp image data
-        response.data.images.forEach((img) => {
-            tempImages.value.push({ url: img.url, path: img.path });
-            form.value.images.push(img.url);
+        // Store temp media data (images + video)
+        response.data.images.forEach((media: any) => {
+            tempMedia.value.push({
+                url: media.url,
+                path: media.path,
+                media_type: media.media_type || 'image',
+                thumbnail_url: media.thumbnail_url,
+                duration: media.duration,
+                file_size: media.file_size
+            });
+            form.value.images.push(media.url);
         });
 
-        success(`${response.data.count} image(s) uploaded successfully!`);
+        const imageCount = response.data.images.filter((m: any) => m.media_type === 'image').length;
+        const videoCount = response.data.images.filter((m: any) => m.media_type === 'video').length;
+
+        let message = '';
+        if (imageCount > 0 && videoCount > 0) {
+            message = t('product.success.mediaUploaded', { imageCount, videoCount });
+        } else if (videoCount > 0) {
+            message = t('product.success.videoUploaded', { count: videoCount });
+        } else {
+            message = t('product.success.imageUploaded', { count: imageCount });
+        }
+
+        success(message);
     } catch (err: any) {
-        showError(err.message || "Failed to upload images");
+        showError(err.message || t('product.error.uploadFailed'));
     } finally {
         uploading.value = false;
     }
 };
 
-// Remove image
-const removeImage = (index: number) => {
-    tempImages.value.splice(index, 1);
+// Remove media (image or video)
+const removeMedia = (index: number) => {
+    tempMedia.value.splice(index, 1);
     form.value.images.splice(index, 1);
 };
 
@@ -168,10 +206,10 @@ const handleGenerateSeo = async () => {
             form.value.seo_meta.title = response.data.title;
             form.value.seo_meta.description = response.data.description;
             form.value.seo_meta.keywords = response.data.keywords;
-            success("SEO generated successfully!");
+            success(t('product.success.seoGenerated'));
         }
     } catch (err: any) {
-        showError(err?.data?.message || "Failed to generate SEO");
+        showError(err?.data?.message || t('product.error.seoGenerateFailed'));
     } finally {
         generatingSeo.value = false;
     }
@@ -180,17 +218,17 @@ const handleGenerateSeo = async () => {
 // Submit form
 const handleSubmit = async () => {
     if (!form.value.name) {
-        showError("Product name is required");
+        showError(t('product.validation.nameRequired'));
         return;
     }
 
     if (!form.value.brand_id) {
-        showError("Brand is required");
+        showError(t('product.validation.brandRequired'));
         return;
     }
 
     if (selectedCategories.value.length === 0) {
-        showError("At least one category is required");
+        showError(t('product.validation.categoryRequired'));
         return;
     }
 
@@ -215,42 +253,42 @@ const handleSubmit = async () => {
         // Create product first
         const productResponse = (await createProduct(payload)) as any;
 
-        console.log('Full product response:', JSON.stringify(productResponse, null, 2));
-
         // Try different possible response structures
         const productId = productResponse?.data?.id || productResponse?.id;
 
-        console.log('Extracted productId:', productId);
-
         if (!productId) {
-            console.error('Failed to extract product ID. Response:', productResponse);
             showError("Failed to get product ID from response");
             loading.value = false;
             return;
         }
 
-        // Move temp images to permanent location if any
-        if (tempImages.value.length > 0) {
-            console.log('Moving temp images for product:', productId);
-            const tempPaths = tempImages.value.map((img) => img.path);
+        // Move temp media (images + video) to permanent location if any
+        if (tempMedia.value.length > 0) {
+            const tempPaths = tempMedia.value.map((media) => media.path);
+            const metadata = tempMedia.value.map((media) => ({
+                media_type: media.media_type,
+                duration: media.duration,
+                file_size: media.file_size,
+                thumbnail_url: media.thumbnail_url,
+            }));
+
             await moveImages({
                 temp_paths: tempPaths,
                 type: "product",
                 product_id: productId,
+                metadata: metadata,
             });
         }
 
-        success("Product created successfully! Now add variants.");
+        success(t('product.success.created'));
 
         // Redirect to Step 2: Add Variants (SPA navigation without reload)
         const redirectUrl = `/catalogs/products/create/${productId}/variants`;
-        console.log('Redirecting to:', redirectUrl);
 
         // Don't reset loading here, let the navigation complete
         await navigateTo(redirectUrl);
     } catch (err: any) {
-        console.error('Create product error:', err);
-        showError(err?.data?.message || "Failed to create product");
+        showError(err?.data?.message || t('product.error.createFailed'));
         loading.value = false;
     }
 };
@@ -259,8 +297,8 @@ const handleSubmit = async () => {
 <template>
     <div>
         <PageTitle
-            :title="'Create Product'"
-            :items="[{ label: 'Catalogs' }, { label: 'Products' }, { label: 'Create', active: true }]" />
+            :title="$t('product.create')"
+            :items="[{ label: $t('nav.catalogs') }, { label: $t('nav.products'), path: '/catalogs/products' }, { label: $t('common.create'), active: true }]" />
 
         <div class="mt-6">
             <form @submit.prevent="handleSubmit">
@@ -268,22 +306,22 @@ const handleSubmit = async () => {
                     <!-- Basic Information -->
                     <div class="card bg-base-100 shadow">
                         <div class="card-body">
-                            <div class="card-title">Basic Information</div>
+                            <div class="card-title">{{ $t('product.info.basicInformation') }}</div>
                             <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
                                 <div class="space-y-2">
                                     <label class="fieldset-label" for="name">
-                                        Name <span class="text-error">*</span>
+                                        {{ $t('product.name') }} <span class="text-error">*</span>
                                     </label>
                                     <input
                                         id="name"
                                         v-model="form.name"
                                         type="text"
                                         class="input w-full"
-                                        placeholder="Product name"
+                                        :placeholder="$t('product.name')"
                                         required />
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="fieldset-label" for="slug">Slug</label>
+                                    <label class="fieldset-label" for="slug">{{ $t('product.slug') }}</label>
                                     <input
                                         id="slug"
                                         v-model="form.slug"
@@ -422,23 +460,58 @@ const handleSubmit = async () => {
                         </div>
                     </div>
 
-                    <!-- Product Images -->
+                    <!-- Product Media (Images + Video) -->
                     <div class="card bg-base-100 shadow md:col-span-2">
                         <div class="card-body">
-                            <div class="card-title">Product Images</div>
+                            <div class="card-title">
+                                <span class="iconify lucide--images size-5" />
+                                {{ $t('product.media.title') }}
+                            </div>
                             <div class="mt-2">
-                                <!-- Preview images -->
-                                <div v-if="form.images.length > 0" class="mb-4">
+                                <!-- Preview media -->
+                                <div v-if="tempMedia.length > 0" class="mb-4">
                                     <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                                         <div
-                                            v-for="(image, index) in form.images"
+                                            v-for="(media, index) in tempMedia"
                                             :key="index"
-                                            class="group relative aspect-square overflow-hidden rounded-lg border-2 border-base-300">
-                                            <img :src="image" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
+                                            class="group relative aspect-square overflow-hidden rounded-lg border-2"
+                                            :class="media.media_type === 'video' ? 'border-primary' : 'border-base-300'">
+                                            <!-- Image Preview -->
+                                            <img v-if="media.media_type === 'image'" :src="media.url" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
+
+                                            <!-- Video Preview with Thumbnail -->
+                                            <div v-else class="relative h-full w-full">
+                                                <img
+                                                    v-if="media.thumbnail_url"
+                                                    :src="media.thumbnail_url"
+                                                    :alt="`Video thumbnail ${index + 1}`"
+                                                    class="h-full w-full object-cover" />
+                                                <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">
+                                                    <span class="iconify lucide--video size-12 text-base-content/40" />
+                                                </div>
+                                                <!-- Play Icon Overlay -->
+                                                <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                                                    <div class="bg-primary rounded-full p-3">
+                                                        <span class="iconify lucide--play size-6 text-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Media Type Badge -->
+                                            <div v-if="media.media_type === 'video'" class="absolute top-2 left-2 badge badge-primary badge-sm gap-1 z-10">
+                                                <span class="iconify lucide--video size-3" />
+                                                {{ $t('product.media.video') }}
+                                            </div>
+
+                                            <!-- Video Duration -->
+                                            <div v-if="media.media_type === 'video' && media.duration" class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs z-10">
+                                                {{ Math.floor(media.duration / 60) }}:{{ String(media.duration % 60).padStart(2, '0') }}
+                                            </div>
+                                            <!-- Remove Button -->
                                             <button
                                                 type="button"
-                                                @click="removeImage(index)"
-                                                class="btn btn-circle btn-error btn-xs absolute -right-1 -top-1">
+                                                @click="removeMedia(index)"
+                                                class="btn btn-circle btn-error btn-xs absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <span class="iconify lucide--x size-3" />
                                             </button>
                                         </div>
@@ -448,22 +521,26 @@ const handleSubmit = async () => {
                                 <!-- Upload Area -->
                                 <div class="space-y-3">
                                     <div class="border-2 border-dashed border-base-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                                        <span class="iconify lucide--images text-base-content/40 mb-2 size-10 block mx-auto" />
+                                        <span class="iconify lucide--upload-cloud text-base-content/40 mb-2 size-10 block mx-auto" />
                                         <p class="text-base-content/60 mb-3 text-sm">
-                                            {{ form.images.length > 0 ? "Add more images" : "Upload product images" }}
+                                            {{ tempMedia.length > 0 ? $t('product.media.addMore') : $t('product.media.uploadMedia') }}
                                         </p>
                                         <label class="btn btn-primary btn-sm">
                                             <span v-if="uploading" class="loading loading-spinner loading-xs"></span>
                                             <span v-else class="iconify lucide--upload size-4" />
-                                            {{ uploading ? "Uploading..." : "Choose Files" }}
-                                            <input type="file" accept="image/*" multiple class="hidden" @change="handleFileUpload" :disabled="uploading" />
+                                            {{ uploading ? $t('product.media.uploading') : $t('product.media.upload') }}
+                                            <input type="file" accept="image/*,video/*" multiple class="hidden" @change="handleFileUpload" :disabled="uploading" />
                                         </label>
                                     </div>
                                 </div>
 
-                                <p class="text-base-content/60 mt-3 text-xs">
-                                    You can select multiple images. Supported: JPG, PNG, GIF, WebP. Max 10MB per image.
-                                </p>
+                                <div class="alert alert-info mt-3">
+                                    <span class="iconify lucide--info size-4" />
+                                    <div class="text-xs">
+                                        <p>{{ $t('product.media.imageInfo') }}</p>
+                                        <p>{{ $t('product.media.videoInfo') }}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -471,25 +548,30 @@ const handleSubmit = async () => {
                     <!-- SEO Meta -->
                     <div class="card bg-base-100 shadow md:col-span-2">
                         <div class="card-body">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                 <div class="card-title">
                                     <span class="iconify lucide--search size-5" />
-                                    SEO Meta Information
+                                    {{ $t('product.seo.title') }}
                                 </div>
-                                <button
-                                    type="button"
-                                    @click="handleGenerateSeo"
-                                    class="btn btn-primary btn-sm"
-                                    :disabled="generatingSeo || !form.name || !form.description">
-                                    <span v-if="generatingSeo" class="loading loading-spinner loading-xs"></span>
-                                    <span v-else class="iconify lucide--sparkles size-4" />
-                                    {{ generatingSeo ? "Generating..." : "Generate by AI" }}
-                                </button>
+                                <div class="flex flex-col items-end gap-1">
+                                    <button
+                                        type="button"
+                                        @click="handleGenerateSeo"
+                                        class="btn btn-primary btn-sm"
+                                        :disabled="generatingSeo || !form.name || !form.description">
+                                        <span v-if="generatingSeo" class="loading loading-spinner loading-xs"></span>
+                                        <span v-else class="iconify lucide--sparkles size-4" />
+                                        {{ generatingSeo ? $t('common.loading') : $t('product.seo.generateBySeo') }}
+                                    </button>
+                                    <p v-if="!form.name || !form.description" class="text-xs text-warning">
+                                        {{ $t('product.validation.descriptionRequired') }}
+                                    </p>
+                                </div>
                             </div>
                             <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
                                 <div class="space-y-2">
                                     <label class="fieldset-label" for="seo_title">
-                                        SEO Title
+                                        {{ $t('product.seo.seoTitle') }}
                                     </label>
                                     <input
                                         id="seo_title"

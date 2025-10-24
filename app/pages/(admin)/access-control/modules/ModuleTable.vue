@@ -237,7 +237,6 @@ const saveOrder = async () => {
     try {
         saving.value = true;
         const orderData = buildOrderData();
-        console.log("Sending order data:", orderData);
         await updateModulesOrder(orderData);
         success("Module order updated successfully!");
         hasChanges.value = false;

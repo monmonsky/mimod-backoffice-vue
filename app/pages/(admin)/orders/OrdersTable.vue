@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { formatPrice, formatDate } from "~/utils/formatters";
+import UpdateStatusModal from "./UpdateStatusModal.vue";
+import UpdatePaymentModal from "./UpdatePaymentModal.vue";
+import DetailModal from "./DetailModal.vue";
 
 const emit = defineEmits<{
     'update:statistics': [stats: any]

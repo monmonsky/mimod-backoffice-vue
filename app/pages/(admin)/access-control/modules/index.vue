@@ -5,6 +5,10 @@ import ModuleTable from "./ModuleTable.vue";
 definePageMeta({
     layout: "admin",
 });
+
+// Set page title from admin menu
+const { setPageTitleFromMenu } = useAdminMenu();
+setPageTitleFromMenu();
 </script>
 <template>
     <div>
