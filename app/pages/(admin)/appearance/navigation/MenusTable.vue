@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CreateEditMenuModal from "./CreateEditMenuModal.vue";
-import BulkCreateCategoriesModal from "./BulkCreateCategoriesModal.vue";
 import type { Menu } from "~/types/appearance/navigation";
 
 const emit = defineEmits<{
@@ -23,7 +22,6 @@ const getLinkTypeLabel = (type: string) => {
         static: "Static URL",
         category: "Category",
         product: "Product",
-        brand: "Brand",
         external: "External",
     };
     return labels[type] || type;
@@ -34,7 +32,6 @@ const getLinkTypeIcon = (type: string) => {
         static: "lucide--link",
         category: "lucide--folder",
         product: "lucide--package",
-        brand: "lucide--tag",
         external: "lucide--external-link",
     };
     return icons[type] || "lucide--link";
@@ -110,9 +107,6 @@ const getMenuUrl = (menu: Menu) => {
     }
     if (menu.link_type === 'product' && menu.product) {
         return `/product/${menu.product.slug}`;
-    }
-    if (menu.link_type === 'brand' && menu.brand) {
-        return `/brand/${menu.brand.slug}`;
     }
     return '-';
 };
@@ -211,7 +205,6 @@ watch(statistics, (newStats) => {
 // Modals
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
-const showBulkCreateModal = ref(false);
 const selectedMenu = ref<Menu | null>(null);
 
 const openCreateModal = () => {
@@ -224,15 +217,10 @@ const openEditModal = (menu: Menu) => {
     showEditModal.value = true;
 };
 
-const openBulkCreateModal = () => {
-    showBulkCreateModal.value = true;
-};
-
 const handleMenuSaved = () => {
     refresh();
     showCreateModal.value = false;
     showEditModal.value = false;
-    showBulkCreateModal.value = false;
 };
 
 // Delete menu
@@ -410,10 +398,6 @@ const findChildren = (parentId: number, location: string) => {
                         </label>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button @click="openBulkCreateModal" class="btn btn-sm btn-outline">
-                            <span class="iconify lucide--list-plus size-4" />
-                            <span class="hidden sm:inline">Bulk Add</span>
-                        </button>
                         <button @click="openCreateModal" class="btn btn-sm btn-primary">
                             <span class="iconify lucide--plus size-4" />
                             <span class="hidden sm:inline">Add Menu</span>
@@ -597,12 +581,6 @@ const findChildren = (parentId: number, location: string) => {
             v-if="showEditModal && selectedMenu"
             :menu="selectedMenu"
             @close="showEditModal = false"
-            @saved="handleMenuSaved" />
-
-        <!-- Bulk Create Modal -->
-        <BulkCreateCategoriesModal
-            v-if="showBulkCreateModal"
-            @close="showBulkCreateModal = false"
             @saved="handleMenuSaved" />
 
         <!-- Delete Confirmation Modal -->

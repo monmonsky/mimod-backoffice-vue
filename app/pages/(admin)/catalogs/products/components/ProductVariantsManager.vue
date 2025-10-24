@@ -19,6 +19,8 @@ const emit = defineEmits<{
 }>();
 
 const { success, error: showError } = useToast();
+const { uploadTempImages, moveImages } = useImageUpload();
+const { getMediaUrl } = useMediaUrl();
 
 // Variants state
 const variants = ref<ProductVariant[]>([...props.initialVariants]);
@@ -78,9 +80,19 @@ const openEditModal = (variant: ProductVariant) => {
     // Get image URLs from images array
     const imageUrls = variant.images?.map(img => img.url) || [];
 
+    // Ensure size is string type for radio button matching
+    // Remove " tahun" suffix if present (API returns "5-6 tahun", but options are "5-6")
+    let sizeValue = variant.size ? String(variant.size).trim() : "";
+    sizeValue = sizeValue.replace(/\s*tahun\s*$/i, '').trim();
+
+    console.log("=== EDIT VARIANT ===");
+    console.log("Variant size from API:", variant.size, "Type:", typeof variant.size);
+    console.log("Converted size (after removing 'tahun'):", sizeValue, "Type:", typeof sizeValue);
+    console.log("====================");
+
     form.value = {
         sku: variant.sku || "",
-        size: variant.size || "",
+        size: sizeValue,
         color: variant.color || "",
         weight_gram: variant.weight_gram || 0,
         price: variant.price || "",
@@ -144,7 +156,7 @@ const generateSkuBarcode = async () => {
     }
 };
 
-// Handle multiple image upload
+// Handle multiple image upload (variant only supports images, no video)
 const handleImageUpload = async (event: Event) => {
     const target = event.target as HTMLInputElement;
     const files = target.files;
@@ -154,74 +166,33 @@ const handleImageUpload = async (event: Event) => {
         uploading.value = true;
         const fileArray = Array.from(files);
 
-        // Generate alt_text: Product Name - SKU
-        const altText = `${props.productName} - ${form.value.sku}`;
+        // Use the uploadTempImages composable which handles storage_base URL fixing
+        const response = await uploadTempImages(
+            fileArray,
+            {
+                type: "variant",
+                maxSizeMB: 10,
+                allowedTypes: ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+            },
+            sessionId.value
+        );
 
-        // If editing existing variant, upload directly to variant
-        if (editingVariant.value) {
+        // Store session ID for future uploads
+        if (!sessionId.value && response.data.session_id) {
+            sessionId.value = response.data.session_id;
+        }
 
-            const formData = new FormData();
-            fileArray.forEach((file) => {
-                formData.append("images[]", file);
+        // Add uploaded images to form (URLs are already fixed by composable)
+        if (response.data.images && response.data.images.length > 0) {
+            response.data.images.forEach((img: any) => {
+                // Store temp paths for later moving (both create and edit need this)
+                tempImagePaths.value.push({ url: img.url, path: img.path });
+                form.value.images.push(img.url);
             });
-            formData.append("type", "variant");
-            formData.append("variant_id", editingVariant.value!.id.toString());
-            formData.append("alt_text", altText);
-
-            const response = await $fetch("/upload/temp", {
-                method: "POST",
-                baseURL: useRuntimeConfig().public.apiBase,
-                headers: {
-                    Authorization: `Bearer ${useAuthStore().token}`,
-                },
-                body: formData,
-            });
-
-            const data = (response as any).data;
-            if (data.images && data.images.length > 0) {
-                // Add uploaded images to form
-                data.images.forEach((img: any) => {
-                    form.value.images.push(img.url);
-                });
-                success(`${data.count} image(s) uploaded successfully!`);
-            }
-        } else {
-
-            const formData = new FormData();
-            fileArray.forEach((file) => {
-                formData.append("images[]", file);
-            });
-            formData.append("type", "variant");
-            formData.append("alt_text", altText);
-            if (sessionId.value) {
-                formData.append("session_id", sessionId.value);
-            }
-
-            // Upload to temp folder for new variant
-            const response = await $fetch("/upload/temp", {
-                method: "POST",
-                baseURL: useRuntimeConfig().public.apiBase,
-                headers: {
-                    Authorization: `Bearer ${useAuthStore().token}`,
-                },
-                body: formData,
-            });
-
-            const data = (response as any).data;
-            if (!sessionId.value && data.session_id) {
-                sessionId.value = data.session_id;
-            }
-
-            if (data.images && data.images.length > 0) {
-                data.images.forEach((img: any) => {
-                    tempImagePaths.value.push({ url: img.url, path: img.path });
-                    form.value.images.push(img.url);
-                });
-                success(`${data.count} image(s) uploaded successfully!`);
-            }
+            success(`${response.data.count} image(s) uploaded successfully!`);
         }
     } catch (err: any) {
-        showError(err?.data?.message || "Failed to upload images");
+        showError(err.message || "Failed to upload images");
     } finally {
         uploading.value = false;
     }
@@ -273,6 +244,29 @@ const saveVariant = async () => {
                     barcode: form.value.barcode || null,
                 },
             });
+
+            // Move temp images to permanent location if any new images were uploaded
+            if (tempImagePaths.value.length > 0) {
+                console.log("=== MOVING UPDATED VARIANT IMAGES ===");
+                console.log("Variant ID:", editingVariant.value.id);
+                console.log("Temp paths count:", tempImagePaths.value.length);
+                console.log("Temp paths:", tempImagePaths.value);
+
+                try {
+                    const tempPaths = tempImagePaths.value.map((img) => img.path);
+                    await moveImages({
+                        temp_paths: tempPaths,
+                        type: "variant",
+                        variant_id: editingVariant.value.id,
+                        product_id: props.productId,
+                    });
+
+                    console.log("✓ Updated variant images moved successfully");
+                } catch (moveErr: any) {
+                    console.error("❌ Failed to move updated variant images:", moveErr);
+                    showError("Images uploaded but failed to save. Please try again.");
+                }
+            }
 
             // Update in local state with response data
             const index = variants.value.findIndex((v) => v.id === editingVariant.value!.id);
@@ -354,6 +348,31 @@ const saveVariant = async () => {
             }
 
             variants.value.push(newVariant);
+
+            // Move temp images to permanent location if any
+            if (tempImagePaths.value.length > 0 && newVariant.id) {
+                console.log("=== MOVING VARIANT IMAGES ===");
+                console.log("Variant ID:", newVariant.id);
+                console.log("Temp paths count:", tempImagePaths.value.length);
+                console.log("Temp paths:", tempImagePaths.value);
+
+                try {
+                    const tempPaths = tempImagePaths.value.map((img) => img.path);
+                    await moveImages({
+                        temp_paths: tempPaths,
+                        type: "variant",
+                        variant_id: newVariant.id,
+                        product_id: props.productId,
+                    });
+
+                    console.log("✓ Variant images moved successfully");
+                } catch (moveErr: any) {
+                    console.error("❌ Failed to move variant images:", moveErr);
+                    // Don't fail the whole operation, just log the error
+                }
+            } else {
+                console.log("=== NO TEMP IMAGES TO MOVE FOR VARIANT ===");
+            }
 
             // Clear session ID and temp paths after successful creation
             sessionId.value = "";
@@ -454,7 +473,7 @@ const formatPrice = (price: string | number) => {
                                         <div class="h-12 w-12 rounded">
                                             <img
                                                 v-if="getPrimaryImage(variant)"
-                                                :src="getPrimaryImage(variant)!.url"
+                                                :src="getMediaUrl(getPrimaryImage(variant)!.url)"
                                                 :alt="variant.sku" />
                                             <div
                                                 v-else
@@ -572,6 +591,11 @@ const formatPrice = (price: string | number) => {
                             <label class="fieldset-label">
                                 Size <span class="text-error">*</span>
                             </label>
+                            <!-- Debug: Show current form.size value -->
+                            <div v-if="editingVariant" class="text-xs text-base-content/60 mb-2">
+                                Current: <code class="bg-base-200 px-1 rounded">{{ form.size }}</code>
+                                (Type: {{ typeof form.size }})
+                            </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <label
                                     v-for="sizeOption in ['5-6', '7-8', '9-10', '11-12']"
@@ -675,7 +699,7 @@ const formatPrice = (price: string | number) => {
                         <div v-if="form.images.length > 0" class="mb-3">
                             <div class="grid grid-cols-4 gap-2">
                                 <div v-for="(image, index) in form.images" :key="index" class="group relative aspect-square">
-                                    <img :src="image" :alt="`Variant image ${index + 1}`" class="h-full w-full rounded object-cover" />
+                                    <img :src="getMediaUrl(image)" :alt="`Variant image ${index + 1}`" class="h-full w-full rounded object-cover" />
                                     <button
                                         type="button"
                                         @click="removeImage(index)"

@@ -57,28 +57,28 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         label: "Customers",
         url: "/customers",
     },
-    {
-        id: "marketing-label",
-        isTitle: true,
-        label: "Marketing",
-    },
-    {
-        id: "marketing",
-        icon: "lucide--megaphone",
-        label: "Marketing",
-        children: [
-            {
-                id: "marketing-coupons",
-                label: "Coupons",
-                url: "/marketing/coupons",
-            },
-            {
-                id: "marketing-flash-sale",
-                label: "Flash Sale",
-                url: "/marketing/flash-sale",
-            },
-        ],
-    },
+    // {
+    //     id: "marketing-label",
+    //     isTitle: true,
+    //     label: "Marketing",
+    // },
+    // {
+    //     id: "marketing",
+    //     icon: "lucide--megaphone",
+    //     label: "Marketing",
+    //     children: [
+    //         {
+    //             id: "marketing-coupons",
+    //             label: "Coupons",
+    //             url: "/marketing/coupons",
+    //         },
+    //         // {
+    //         //     id: "marketing-flash-sale",
+    //         //     label: "Flash Sale",
+    //         //     url: "/marketing/flash-sale",
+    //         // },
+    //     ],
+    // },
     {
         id: "appearance-label",
         isTitle: true,

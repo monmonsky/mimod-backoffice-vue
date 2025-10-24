@@ -264,6 +264,10 @@ const handleSubmit = async () => {
 
         // Move temp media (images + video) to permanent location if any
         if (tempMedia.value.length > 0) {
+            console.log("=== BEFORE MOVE IMAGES ===");
+            console.log("tempMedia.value:", tempMedia.value);
+            console.log("tempMedia count:", tempMedia.value.length);
+
             const tempPaths = tempMedia.value.map((media) => media.path);
             const metadata = tempMedia.value.map((media) => ({
                 media_type: media.media_type,
@@ -272,12 +276,25 @@ const handleSubmit = async () => {
                 thumbnail_url: media.thumbnail_url,
             }));
 
+            console.log("Temp Paths to move:", tempPaths);
+            console.log("Metadata:", metadata);
+            console.log("Product ID:", productId);
+            console.log("==========================");
+
             await moveImages({
                 temp_paths: tempPaths,
                 type: "product",
                 product_id: productId,
                 metadata: metadata,
             });
+
+            console.log("=== AFTER MOVE IMAGES ===");
+            console.log("Move images completed successfully");
+            console.log("=========================");
+        } else {
+            console.log("=== NO TEMP MEDIA TO MOVE ===");
+            console.log("tempMedia.value is empty, skipping moveImages");
+            console.log("==============================");
         }
 
         success(t('product.success.created'));

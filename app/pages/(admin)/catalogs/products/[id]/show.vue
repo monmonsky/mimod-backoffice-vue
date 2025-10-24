@@ -7,6 +7,7 @@ definePageMeta({
 
 const route = useRoute();
 const productId = parseInt(route.params.id as string);
+const { getMediaUrl, getThumbnailUrl, isVideo, isImage } = useMediaUrl();
 
 // Fetch product
 const { data: productResponse, pending } = await useAsyncData(
@@ -262,13 +263,13 @@ const currentVariantImage = computed(() => {
 
                                     <div class="aspect-square relative">
                                         <!-- Image -->
-                                        <img v-if="!media.media_type || media.media_type === 'image'" :src="media.url" :alt="media.alt_text || product.name" class="h-full w-full object-cover" />
+                                        <img v-if="!media.media_type || media.media_type === 'image'" :src="getMediaUrl(media.url)" :alt="media.alt_text || product.name" class="h-full w-full object-cover" />
 
                                         <!-- Video with Thumbnail -->
                                         <div v-else-if="media.media_type === 'video'" class="h-full w-full relative">
                                             <img
                                                 v-if="media.thumbnail_url"
-                                                :src="media.thumbnail_url"
+                                                :src="getThumbnailUrl(media.thumbnail_url)"
                                                 :alt="`Video thumbnail ${index + 1}`"
                                                 class="h-full w-full object-cover" />
                                             <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">
@@ -416,7 +417,7 @@ const currentVariantImage = computed(() => {
                                                 <div class="mask mask-squircle h-10 w-10 relative">
                                                     <img
                                                         v-if="getPrimaryImage(variant)"
-                                                        :src="getPrimaryImage(variant)"
+                                                        :src="getMediaUrl(getPrimaryImage(variant))"
                                                         :alt="variant.sku"
                                                         class="object-cover" />
                                                     <!-- Hover overlay -->
@@ -573,15 +574,15 @@ const currentVariantImage = computed(() => {
                         <!-- Image -->
                         <img
                             v-if="currentImage && currentImage.media_type === 'image'"
-                            :src="currentImage.url"
+                            :src="getMediaUrl(currentImage.url)"
                             :alt="currentImage.alt_text || product.name"
                             class="max-w-full max-h-[80vh] object-contain" />
 
                         <!-- Video -->
                         <video
                             v-else-if="currentImage && currentImage.media_type === 'video'"
-                            :src="currentImage.url"
-                            :poster="currentImage.thumbnail_url"
+                            :src="getMediaUrl(currentImage.url)"
+                            :poster="getThumbnailUrl(currentImage.thumbnail_url)"
                             controls
                             class="max-w-full max-h-[80vh] object-contain"
                             autoplay>
@@ -659,7 +660,7 @@ const currentVariantImage = computed(() => {
                     <div class="flex items-center justify-center min-h-[60vh] max-h-[80vh] relative">
                         <img
                             v-if="currentVariantImage"
-                            :src="currentVariantImage.url"
+                            :src="getMediaUrl(currentVariantImage.url)"
                             :alt="currentVariantImage.alt_text || 'Variant Image'"
                             class="max-w-full max-h-[80vh] object-contain" />
 

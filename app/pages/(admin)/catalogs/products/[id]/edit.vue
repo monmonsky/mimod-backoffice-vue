@@ -13,6 +13,7 @@ const { updateProduct } = useProducts();
 const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
 const { generateSeo } = useAISeo();
+const { getMediaUrl, getThumbnailUrl } = useMediaUrl();
 
 // Fetch product
 const { data: productResponse, pending: loadingProduct } = await useAsyncData(`product-${productId}`, () =>
@@ -642,13 +643,13 @@ const handleSubmit = async () => {
                                             class="group relative aspect-square overflow-hidden rounded-lg border-2"
                                             :class="media.is_primary ? 'border-primary' : media.media_type === 'video' ? 'border-primary' : 'border-base-300'">
                                             <!-- Image Preview -->
-                                            <img v-if="media.media_type === 'image'" :src="media.url" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
+                                            <img v-if="media.media_type === 'image'" :src="getMediaUrl(media.url)" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
 
                                             <!-- Video Preview with Thumbnail -->
                                             <div v-else class="relative h-full w-full">
                                                 <img
                                                     v-if="media.thumbnail_url"
-                                                    :src="media.thumbnail_url"
+                                                    :src="getThumbnailUrl(media.thumbnail_url)"
                                                     :alt="`Video thumbnail ${index + 1}`"
                                                     class="h-full w-full object-cover" />
                                                 <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">
@@ -716,13 +717,13 @@ const handleSubmit = async () => {
                                             :key="media.path"
                                             class="group relative aspect-square overflow-hidden rounded-lg border-2 border-warning">
                                             <!-- Image Preview -->
-                                            <img v-if="media.media_type === 'image'" :src="media.url" :alt="`New image ${index + 1}`" class="h-full w-full object-cover" />
+                                            <img v-if="media.media_type === 'image'" :src="getMediaUrl(media.url)" :alt="`New image ${index + 1}`" class="h-full w-full object-cover" />
 
                                             <!-- Video Preview with Thumbnail -->
                                             <div v-else class="relative h-full w-full">
                                                 <img
                                                     v-if="media.thumbnail_url"
-                                                    :src="media.thumbnail_url"
+                                                    :src="getThumbnailUrl(media.thumbnail_url)"
                                                     :alt="`New video thumbnail ${index + 1}`"
                                                     class="h-full w-full object-cover" />
                                                 <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">

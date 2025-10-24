@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { deleteProduct } = useProducts();
 const { success, error: showError } = useToast();
+const { getMediaUrl, getThumbnailUrl } = useMediaUrl();
 
 // Filters
 const search = ref("");
@@ -124,11 +125,42 @@ const parseTags = (tags: string) => {
     }
 };
 
-// Get primary image or first image
+// Get primary image or first media (support video thumbnail)
 const getPrimaryImage = (images: any[]) => {
     if (!images || images.length === 0) return null;
-    const primary = images.find((img) => img.is_primary);
-    return primary || images[0];
+
+    // Find primary image first
+    const primary = images.find((img) => img.is_primary && img.media_type === 'image');
+    if (primary) return primary;
+
+    // If no primary image, find first image
+    const firstImage = images.find((img) => img.media_type === 'image' || !img.media_type);
+    if (firstImage) return firstImage;
+
+    // If no images, use first video's thumbnail
+    const firstVideo = images.find((img) => img.media_type === 'video');
+    if (firstVideo && firstVideo.thumbnail_url) {
+        return {
+            ...firstVideo,
+            url: firstVideo.thumbnail_url, // Use thumbnail as URL
+            is_video_thumbnail: true
+        };
+    }
+
+    return images[0];
+};
+
+// Get display URL for media (handles both image and video thumbnail)
+const getDisplayUrl = (media: any) => {
+    if (!media) return '';
+
+    // If it's a video thumbnail flag, URL is already set to thumbnail
+    if (media.is_video_thumbnail) {
+        return getThumbnailUrl(media.url);
+    }
+
+    // For regular images
+    return getMediaUrl(media.url);
 };
 </script>
 
@@ -252,7 +284,7 @@ const getPrimaryImage = (images: any[]) => {
                                         <div class="mask mask-squircle h-12 w-12">
                                             <img
                                                 v-if="getPrimaryImage(product.images)"
-                                                :src="getPrimaryImage(product.images).url"
+                                                :src="getDisplayUrl(getPrimaryImage(product.images))"
                                                 :alt="product.name"
                                                 class="object-cover" />
                                             <div
@@ -273,14 +305,20 @@ const getPrimaryImage = (images: any[]) => {
                                     <span class="badge badge-sm badge-outline">{{ product.brand_name }}</span>
                                 </td>
                                 <td>
-                                    <div class="flex flex-wrap gap-1">
+                                    <div v-if="product.categories && product.categories.length > 0" class="flex flex-wrap gap-1">
                                         <span
-                                            v-for="(category, idx) in product.category_names"
-                                            :key="idx"
+                                            v-for="category in product.categories.slice(0, 3)"
+                                            :key="category.id"
                                             class="badge badge-sm badge-ghost">
-                                            {{ category }}
+                                            {{ category.name }}
+                                        </span>
+                                        <span
+                                            v-if="product.categories.length > 3"
+                                            class="badge badge-sm badge-primary">
+                                            +{{ product.categories.length - 3 }}
                                         </span>
                                     </div>
+                                    <span v-else class="text-base-content/40 text-xs italic">No categories</span>
                                 </td>
                                 <td>
                                     <span class="text-sm">{{ product.age_min }} - {{ product.age_max }} years</span>

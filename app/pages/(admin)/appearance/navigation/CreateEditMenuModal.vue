@@ -12,7 +12,6 @@ const emit = defineEmits<{
 
 const { createMenu, updateMenu } = useMenus();
 const { getCategories } = useCategories();
-const { getBrands } = useBrands();
 const { success, error: showError } = useToast();
 
 const isEdit = computed(() => !!props.menu);
@@ -67,7 +66,6 @@ const formData = ref<Partial<MenuFormData>>({
     link_type: props.menu?.link_type || "static",
     url: props.menu?.url || "",
     category_id: props.menu?.category_id || undefined,
-    brand_id: props.menu?.brand_id || undefined,
     parent_id: props.menu?.parent_id || undefined,
     order: props.menu?.order || 1,
     is_clickable: props.menu?.is_clickable ?? true,
@@ -86,22 +84,6 @@ const { data: categoriesResponse } = await getCategories({
 const categories = computed(() => {
     const response = categoriesResponse.value as any;
     return response?.data?.categories?.data || [];
-});
-
-// Fetch brands
-const { data: brandsResponse } = await getBrands({
-    per_page: 1000,
-    status: "active",
-});
-const brands = computed(() => {
-    const response = brandsResponse.value as any;
-
-    // Brands API returns: { data: [{ data: [...brands] }] }
-    if (Array.isArray(response?.data) && response.data.length > 0) {
-        return response.data[0]?.data || [];
-    }
-
-    return [];
 });
 
 // Fetch parent menus (for hierarchical menu)
@@ -130,28 +112,34 @@ const parentMenus = computed(() => {
         : allMenus.filter((m: Menu) => !m.parent_id);
 });
 
+// Computed: Preview URL based on link type
+const previewUrl = computed(() => {
+    const linkType = formData.value.link_type;
+
+    if (linkType === 'static' || linkType === 'external') {
+        return formData.value.url || '-';
+    }
+
+    if (linkType === 'category' && formData.value.category_id) {
+        const category = categories.value.find((c: any) => c.id === formData.value.category_id);
+        return category ? `/collections/${category.slug}` : '-';
+    }
+
+    return '-';
+});
+
 // Watch link_type changes to clear irrelevant fields
 watch(() => formData.value.link_type, () => {
     formData.value.url = "";
     formData.value.category_id = undefined;
-    formData.value.brand_id = undefined;
 });
 
-// Auto-fill title when selecting category/brand
+// Auto-fill title when selecting category
 watch(() => formData.value.category_id, (categoryId) => {
     if (categoryId && !formData.value.title) {
         const category = categories.value.find((c: any) => c.id === categoryId);
         if (category) {
             formData.value.title = category.name;
-        }
-    }
-});
-
-watch(() => formData.value.brand_id, (brandId) => {
-    if (brandId && !formData.value.title) {
-        const brand = brands.value.find((b: any) => b.id === brandId);
-        if (brand) {
-            formData.value.title = brand.name;
         }
     }
 });
@@ -197,11 +185,10 @@ const isLocationSelected = (location: 'header' | 'footer' | 'mobile') => {
     return formData.value.menu_locations?.includes(location) || false;
 };
 
-// Link type options with labels (Product removed as requested)
+// Link type options with labels (Product and Brand removed as requested)
 const linkTypeOptions = [
     { value: 'static', label: 'Static URL', icon: 'lucide--link', description: 'Link to internal page' },
     { value: 'category', label: 'Category', icon: 'lucide--folder', description: 'Link to category page' },
-    { value: 'brand', label: 'Brand', icon: 'lucide--tag', description: 'Link to brand page' },
     { value: 'external', label: 'External URL', icon: 'lucide--external-link', description: 'Link to external website' },
 ] as const;
 </script>
@@ -281,22 +268,12 @@ const linkTypeOptions = [
                     </div>
                 </div>
 
-                <!-- Brand (Dynamic from API) -->
-                <div v-if="formData.link_type === 'brand'" class="form-control w-full">
-                    <div class="mb-2">
-                        <span class="text-sm font-medium">Brand <span class="text-error">*</span></span>
-                    </div>
-                    <select
-                        v-model="formData.brand_id"
-                        class="select select-bordered w-full"
-                        :class="{ 'select-error': errors.brand_id }">
-                        <option :value="undefined">Select Brand</option>
-                        <option v-for="brand in brands" :key="brand.id" :value="brand.id">
-                            {{ brand.name }}
-                        </option>
-                    </select>
-                    <div v-if="errors.brand_id" class="mt-1">
-                        <span class="text-xs text-error">{{ errors.brand_id[0] }}</span>
+                <!-- URL Preview -->
+                <div v-if="previewUrl !== '-'" class="alert alert-info">
+                    <span class="iconify lucide--link size-5" />
+                    <div class="flex flex-col">
+                        <span class="text-xs font-medium">Generated URL:</span>
+                        <span class="font-mono text-sm">{{ previewUrl }}</span>
                     </div>
                 </div>
 
