@@ -47,6 +47,12 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         url: "/catalogs/categories",
     },
     {
+        id: "attributes",
+        icon: "lucide--sliders-horizontal",
+        label: "Attributes",
+        url: "/catalogs/attributes",
+    },
+    {
         id: "customers-label",
         isTitle: true,
         label: "Customers",

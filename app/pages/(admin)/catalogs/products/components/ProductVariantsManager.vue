@@ -262,21 +262,41 @@ const saveVariant = async () => {
                     });
 
                     console.log("✓ Updated variant images moved successfully");
+
+                    // Fetch updated variant data with new images from server
+                    console.log("Fetching updated variant data...");
+                    const updatedVariantResponse = await $fetch(`/catalog/products/variants/${editingVariant.value.id}`, {
+                        baseURL: useRuntimeConfig().public.apiBase,
+                        headers: {
+                            Authorization: `Bearer ${useAuthStore().token}`,
+                        },
+                    });
+
+                    // Update local state with fresh data from server
+                    const index = variants.value.findIndex((v) => v.id === editingVariant.value!.id);
+                    if (index !== -1) {
+                        const freshVariant = (updatedVariantResponse as any).data;
+                        if (!freshVariant.images) {
+                            freshVariant.images = [];
+                        }
+                        variants.value[index] = freshVariant;
+                        console.log("✓ Variant data refreshed with new images");
+                    }
                 } catch (moveErr: any) {
                     console.error("❌ Failed to move updated variant images:", moveErr);
                     showError("Images uploaded but failed to save. Please try again.");
+                    return; // Exit early on error
                 }
-            }
-
-            // Update in local state with response data
-            const index = variants.value.findIndex((v) => v.id === editingVariant.value!.id);
-            if (index !== -1) {
-                const updatedVariant = (response as any).data;
-                // Ensure images array exists
-                if (!updatedVariant.images) {
-                    updatedVariant.images = [];
+            } else {
+                // No new images uploaded, just update with response data
+                const index = variants.value.findIndex((v) => v.id === editingVariant.value!.id);
+                if (index !== -1) {
+                    const updatedVariant = (response as any).data;
+                    if (!updatedVariant.images) {
+                        updatedVariant.images = [];
+                    }
+                    variants.value[index] = updatedVariant;
                 }
-                variants.value[index] = updatedVariant;
             }
 
             // Emit event for update
