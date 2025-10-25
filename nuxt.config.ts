@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+    ssr: false,
     app: {
         head: {
             titleTemplate: "%s - Nexus Admin",
@@ -16,11 +17,22 @@ export default defineNuxtConfig({
         appManifest: false,
     },
     compatibilityDate: "2025-05-05",
-    devtools: { enabled: true },
-    modules: ["@pinia/nuxt", "@nuxt/eslint"],
+    devtools: { enabled: false },
+    modules: ["@pinia/nuxt"],
+    typescript: {
+        typeCheck: false,
+    },
     css: ["~/assets/styles/app.css"],
     vite: {
         plugins: [tailwindcss()],
+        optimizeDeps: {
+            exclude: ['fsevents'],
+        },
+        build: {
+            rollupOptions: {
+                maxParallelFileOps: 2,
+            },
+        },
     },
     runtimeConfig: {
         public: {

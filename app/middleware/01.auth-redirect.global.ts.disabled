@@ -1,0 +1,41 @@
+export default defineNuxtRouteMiddleware((to) => {
+    // Only run on client side to avoid SSR issues
+    if (process.server) {
+        return;
+    }
+
+    const authStore = useAuthStore();
+
+    // Skip middleware for auth pages
+    if (to.path.startsWith("/auth/")) {
+        return;
+    }
+
+    // Check if user has valid auth (token exists and not expired)
+    const hasValidAuth = authStore.isAuthenticated && !authStore.isTokenExpired;
+
+    // If trying to access index "/" without auth, redirect to login
+    if (to.path === "/" && !hasValidAuth) {
+        return navigateTo("/auth/login");
+    }
+
+    // If authenticated and trying to access "/", redirect to admin dashboard
+    if (to.path === "/" && hasValidAuth) {
+        return navigateTo("/dashboards");
+    }
+
+    // Protect all admin routes (any route not starting with /auth/)
+    if (!to.path.startsWith("/auth/") && !hasValidAuth) {
+        // Clear expired tokens without triggering logout redirect
+        if (authStore.isTokenExpired) {
+            authStore.token = null;
+            authStore.user = null;
+            authStore.tokenExpiry = null;
+        }
+
+        return navigateTo({
+            path: "/auth/login",
+            query: { redirect: to.fullPath },
+        });
+    }
+});

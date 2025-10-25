@@ -41,7 +41,9 @@ const { data: productsResponse, pending: productsPending } = await useAsyncData(
 
 const products = computed(() => {
     const response = productsResponse.value as any;
-    return extractListData(response, "data");
+    const data = extractListData(response, "data");
+    // Filter out null/undefined values and ensure array
+    return Array.isArray(data) ? data.filter(item => item != null) : [];
 });
 </script>
 <template>

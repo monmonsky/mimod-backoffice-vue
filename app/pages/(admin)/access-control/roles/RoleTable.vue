@@ -46,7 +46,7 @@ const { data: rolesResponse, pending, error } = await useAsyncData(
 
 const roles = computed(() => {
     const response = rolesResponse.value as any;
-    return extractListData(response, "data");
+    return extractListData(response, "data.data");
 });
 
 const pagination = computed(() => {

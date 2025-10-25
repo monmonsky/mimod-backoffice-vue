@@ -51,12 +51,25 @@ const { data: categoriesResponse, pending, error, refresh } = await useAsyncData
 
 const categories = computed(() => {
     const response = categoriesResponse.value as any;
-    return extractListData(response, "data.categories");
+    // Response format: { data: [{ data: [...categories] }] }
+    if (response && Array.isArray(response.data) && response.data.length > 0) {
+        return response.data[0].data || [];
+    }
+    return [];
 });
 
 const pagination = computed(() => {
     const response = categoriesResponse.value as any;
-    return extractPaginationMeta(response, "data.categories");
+    // Response format: { data: [{ current_page, total, ... }] }
+    if (response && Array.isArray(response.data) && response.data.length > 0) {
+        return response.data[0];
+    }
+    return {
+        current_page: 1,
+        last_page: 1,
+        per_page: 15,
+        total: 0,
+    };
 });
 
 const goToPage = (page: number) => {

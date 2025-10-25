@@ -83,7 +83,11 @@ const { data: categoriesResponse } = await getCategories({
 });
 const categories = computed(() => {
     const response = categoriesResponse.value as any;
-    return response?.data?.categories?.data || [];
+    // Response format: { data: [{ data: [...categories] }] }
+    if (response?.data && Array.isArray(response.data) && response.data.length > 0) {
+        return response.data[0]?.data || [];
+    }
+    return [];
 });
 
 // Fetch parent menus (for hierarchical menu)

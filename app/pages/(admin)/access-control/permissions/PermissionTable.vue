@@ -10,7 +10,7 @@ const { getModules } = useModules();
 const { data: modulesResponse } = getModules();
 const modules = computed(() => {
     const response = modulesResponse.value as any;
-    return extractListData(response, "data");
+    return extractListData(response, "data.data");
 });
 
 const searchQuery = ref("");
@@ -58,7 +58,7 @@ const { data: permissionsResponse, pending, error } = await useAsyncData(
 
 const permissions = computed(() => {
     const response = permissionsResponse.value as any;
-    return extractListData(response, "data");
+    return extractListData(response, "data.data");
 });
 
 const pagination = computed(() => {

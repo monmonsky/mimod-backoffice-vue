@@ -38,7 +38,7 @@ const { data: activityResponse, pending, error, refresh } = await useAsyncData(
 
 const activities = computed(() => {
     const response = activityResponse.value as any;
-    return extractListData(response, "data");
+    return extractListData(response, "data.data");
 });
 
 const pagination = computed(() => {

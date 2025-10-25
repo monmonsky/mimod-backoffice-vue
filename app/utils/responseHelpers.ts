@@ -86,14 +86,25 @@ export const extractListData = <T = any>(
 ): T[] => {
     if (!response) return [];
 
+    // Helper to filter null/undefined from arrays
+    const filterNulls = (arr: any[]): T[] => {
+        return Array.isArray(arr) ? arr.filter(item => item != null) : [];
+    };
+
     // If custom path provided, use it
     if (dataPath) {
-        return extractNestedValue(response, dataPath, []);
+        const result = extractNestedValue(response, dataPath, []);
+        return filterNulls(result);
     }
 
     // If response is already an array
     if (Array.isArray(response)) {
-        return response;
+        return filterNulls(response);
+    }
+
+    // PRIORITY: Check if response.data[0] is an object with data property (your API format)
+    if (response.data && Array.isArray(response.data) && response.data.length > 0 && response.data[0]?.data) {
+        return filterNulls(response.data[0].data);
     }
 
     // Try common patterns
@@ -108,13 +119,8 @@ export const extractListData = <T = any>(
     for (const pattern of patterns) {
         const value = extractNestedValue(response, pattern);
         if (Array.isArray(value)) {
-            return value;
+            return filterNulls(value);
         }
-    }
-
-    // Last resort: check if response.data[0] is an object with data property
-    if (response.data && Array.isArray(response.data) && response.data[0]?.data) {
-        return response.data[0].data;
     }
 
     return [];

@@ -55,11 +55,13 @@ const { data: usersResponse, pending, error } = await useAsyncData(
 
 const users = computed(() => {
     const response = usersResponse.value as any;
-    return extractListData(response, "data");
+    // Response format: { data: { data: [...users], current_page, ... } }
+    return extractListData(response, "data.data");
 });
 
 const pagination = computed(() => {
     const response = usersResponse.value as any;
+    // Response format: { data: { current_page, total, ... } }
     return extractPaginationMeta(response, "data");
 });
 

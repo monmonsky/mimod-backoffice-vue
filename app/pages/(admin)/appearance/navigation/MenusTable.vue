@@ -99,6 +99,7 @@ const getLocationIcon = (location: string) => {
         header: "lucide--layout-dashboard",
         footer: "lucide--layout-grid",
         mobile: "lucide--smartphone",
+        unassigned: "lucide--inbox",
     };
     return icons[location] || "lucide--menu";
 };
@@ -108,6 +109,7 @@ const getLocationColor = (location: string) => {
         header: "text-primary",
         footer: "text-secondary",
         mobile: "text-accent",
+        unassigned: "text-warning",
     };
     return colors[location] || "text-base-content";
 };
@@ -142,7 +144,8 @@ const { data: menusResponse, pending, refresh, error: fetchError } = await useAs
 
 const allMenus = computed(() => {
     const response = menusResponse.value as any;
-    return extractListData(response, "data");
+    // Response format: { data: { data: [...menus], current_page, ... } }
+    return extractListData(response, "data.data");
 });
 
 // Group menus by location
@@ -166,15 +169,22 @@ const groupedMenus = computed(() => {
         header: [],
         footer: [],
         mobile: [],
+        unassigned: [], // Add unassigned group for menus without location
     };
 
     filtered.forEach((menu: Menu) => {
         const locations = getLocationBadges(menu.menu_locations);
-        locations.forEach((loc: string) => {
-            if (groups[loc]) {
-                groups[loc].push(menu);
-            }
-        });
+
+        // If no locations assigned, add to unassigned group
+        if (locations.length === 0) {
+            groups.unassigned.push(menu);
+        } else {
+            locations.forEach((loc: string) => {
+                if (groups[loc]) {
+                    groups[loc].push(menu);
+                }
+            });
+        }
     });
 
     // Sort by order
@@ -452,7 +462,13 @@ const findChildren = (parentId: number, location: string) => {
                 <!-- Location Header -->
                 <div class="card-body p-4">
                     <div class="flex items-center gap-3 mb-4">
-                        <div :class="['rounded-lg p-2', location === 'header' ? 'bg-primary/10' : location === 'footer' ? 'bg-secondary/10' : 'bg-accent/10']">
+                        <div :class="[
+                            'rounded-lg p-2',
+                            location === 'header' ? 'bg-primary/10' :
+                            location === 'footer' ? 'bg-secondary/10' :
+                            location === 'mobile' ? 'bg-accent/10' :
+                            location === 'unassigned' ? 'bg-warning/10' : 'bg-base-200'
+                        ]">
                             <span :class="['iconify size-5', getLocationIcon(location), getLocationColor(location)]" />
                         </div>
                         <div>
