@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import PageTitle from "~/components/PageTitle.vue";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
 
 definePageMeta({
     layout: "admin",
@@ -19,6 +20,9 @@ const permissionGroups = computed(() => rolePermissionsResponse.value?.data?.per
 const totalPermissions = computed(() => {
     return permissionGroups.value.reduce((total, group) => total + group.permissions.length, 0);
 });
+
+// Helper for is_system badge (system roles are special)
+const getSystemBadgeClass = (isSystem: boolean) => isSystem ? "badge-info" : "badge-ghost";
 </script>
 
 <template>
@@ -80,7 +84,7 @@ const totalPermissions = computed(() => {
                                 <div>
                                     <label class="text-base-content/60 text-sm font-medium">Type</label>
                                     <p class="mt-1">
-                                        <span :class="['badge', role.is_system ? 'badge-info' : 'badge-ghost']">
+                                        <span class="badge" :class="getSystemBadgeClass(role.is_system)">
                                             {{ role.is_system ? "System" : "Custom" }}
                                         </span>
                                     </p>
@@ -88,7 +92,7 @@ const totalPermissions = computed(() => {
                                 <div>
                                     <label class="text-base-content/60 text-sm font-medium">Status</label>
                                     <p class="mt-1">
-                                        <span :class="['badge', role.is_active ? 'badge-success' : 'badge-error']">
+                                        <span class="badge" :class="getActiveBadgeClass(role.is_active)">
                                             {{ role.is_active ? "Active" : "Inactive" }}
                                         </span>
                                     </p>

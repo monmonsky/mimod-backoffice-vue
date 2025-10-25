@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import PageTitle from "~/components/PageTitle.vue";
+import { getActiveBadgeClass, getVisibleBadgeClass } from "~/utils/statusHelpers";
 
 definePageMeta({
     layout: "admin",
@@ -95,7 +96,7 @@ const module = computed(() => moduleResponse.value?.data);
                                 <div>
                                     <label class="text-base-content/60 text-sm font-medium">Active Status</label>
                                     <p class="mt-1">
-                                        <span :class="['badge', module.is_active ? 'badge-success' : 'badge-error']">
+                                        <span class="badge" :class="getActiveBadgeClass(module.is_active)">
                                             {{ module.is_active ? "Active" : "Inactive" }}
                                         </span>
                                     </p>
@@ -103,7 +104,7 @@ const module = computed(() => moduleResponse.value?.data);
                                 <div>
                                     <label class="text-base-content/60 text-sm font-medium">Visibility</label>
                                     <p class="mt-1">
-                                        <span :class="['badge', module.is_visible ? 'badge-info' : 'badge-ghost']">
+                                        <span class="badge" :class="getVisibleBadgeClass(module.is_visible)">
                                             {{ module.is_visible ? "Visible" : "Hidden" }}
                                         </span>
                                     </p>

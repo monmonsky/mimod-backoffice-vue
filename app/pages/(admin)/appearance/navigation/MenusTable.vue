@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import CreateEditMenuModal from "./CreateEditMenuModal.vue";
 import type { Menu } from "~/types/appearance/navigation";
+import { extractListData } from "~/utils/responseHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 const emit = defineEmits<{
     'update:statistics': [stats: any]
@@ -8,6 +10,18 @@ const emit = defineEmits<{
 
 const { deleteMenu, reorderMenus } = useMenus();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: menuToDelete,
+    openDeleteModal,
+    handleDelete
+} = useDeleteConfirmation(
+    deleteMenu,
+    "menu",
+    async () => await refresh()
+);
 const config = useRuntimeConfig();
 const authStore = useAuthStore();
 
@@ -128,7 +142,7 @@ const { data: menusResponse, pending, refresh, error: fetchError } = await useAs
 
 const allMenus = computed(() => {
     const response = menusResponse.value as any;
-    return response?.data?.data || [];
+    return extractListData(response, "data");
 });
 
 // Group menus by location
@@ -223,28 +237,7 @@ const handleMenuSaved = () => {
     showEditModal.value = false;
 };
 
-// Delete menu
-const confirmDelete = ref(false);
-const menuToDelete = ref<number | null>(null);
-
-const openDeleteModal = (id: number) => {
-    menuToDelete.value = id;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!menuToDelete.value) return;
-
-    try {
-        await deleteMenu(menuToDelete.value);
-        success("Menu deleted successfully!");
-        confirmDelete.value = false;
-        menuToDelete.value = null;
-        refresh();
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to delete menu");
-    }
-};
+// Delete menu composable is defined at top of script
 
 // Drag and Drop for reordering
 const draggedItem = ref<Menu | null>(null);

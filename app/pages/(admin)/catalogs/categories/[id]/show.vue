@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import { extractListData, extractNestedValue } from "~/utils/responseHelpers";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
+import { formatDate } from "~/utils/formatters";
 
 definePageMeta({
     layout: "admin",
@@ -19,13 +22,7 @@ const { data: categoryResponse, pending, error } = await useAsyncData(`category-
 
 const category = computed(() => {
     const response = categoryResponse.value as any;
-    if (response?.data) {
-        if (Array.isArray(response.data) && response.data[0]) {
-            return response.data[0];
-        }
-        return response.data;
-    }
-    return null;
+    return extractNestedValue(response, "data", null);
 });
 
 // Fetch products for this category
@@ -44,27 +41,8 @@ const { data: productsResponse, pending: productsPending } = await useAsyncData(
 
 const products = computed(() => {
     const response = productsResponse.value as any;
-    return response?.data?.data || [];
+    return extractListData(response, "data");
 });
-
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("id-ID", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-};
-
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(price);
-};
 </script>
 <template>
     <div>
@@ -105,7 +83,7 @@ const formatPrice = (price: number) => {
                                     <h2 class="text-2xl font-bold">{{ category.name }}</h2>
                                     <code class="text-base-content/60 text-sm">{{ category.slug }}</code>
                                     <div class="mt-2 flex items-center gap-2">
-                                        <span class="badge" :class="category.is_active ? 'badge-success' : 'badge-error'">
+                                        <span class="badge" :class="getActiveBadgeClass(category.is_active)">
                                             {{ category.is_active ? "Active" : "Inactive" }}
                                         </span>
                                         <span class="badge badge-ghost">Sort: {{ category.sort_order }}</span>
@@ -192,7 +170,7 @@ const formatPrice = (price: number) => {
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <span class="badge badge-sm" :class="product.status ? 'badge-success' : 'badge-error'">
+                                    <span class="badge badge-sm" :class="getActiveBadgeClass(product.status)">
                                         {{ product.status ? "Active" : "Inactive" }}
                                     </span>
                                 </div>

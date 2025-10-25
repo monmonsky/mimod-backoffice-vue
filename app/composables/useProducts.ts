@@ -1,10 +1,15 @@
 import type { ProductFormData, ProductsListResponse, ProductDetailResponse, ProductCreateResponse, ProductUpdateResponse, ProductDeleteResponse } from "~/types/catalogs/products";
+import type { PaginationParams } from "./usePagination";
 
 export const useProducts = () => {
     const config = useRuntimeConfig();
     const authStore = useAuthStore();
+    const { buildPaginationParams } = usePagination();
 
-    const getProducts = (params?: Record<string, any>, options?: { watch?: any[] }) => {
+    const getProducts = (params?: Partial<PaginationParams>, options?: { watch?: any[] }) => {
+        // Apply default pagination params (per_page: 20)
+        const paginationParams = buildPaginationParams(params);
+
         return useAsyncData<ProductsListResponse>(
             "products",
             () =>
@@ -13,7 +18,7 @@ export const useProducts = () => {
                     headers: {
                         Authorization: `Bearer ${authStore.token}`,
                     },
-                    params,
+                    params: paginationParams,
                 }),
             {
                 watch: options?.watch || [],

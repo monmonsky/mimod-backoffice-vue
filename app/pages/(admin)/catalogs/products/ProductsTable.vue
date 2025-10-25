@@ -1,6 +1,21 @@
 <script setup lang="ts">
+import { getStatusBadgeClass } from "~/utils/statusHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
+
 const { deleteProduct } = useProducts();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: productToDelete,
+    openDeleteModal,
+    handleDelete
+} = useDeleteConfirmation(
+    deleteProduct,
+    "product",
+    async () => await refresh()
+);
 const { getMediaUrl, getThumbnailUrl } = useMediaUrl();
 
 // Filters
@@ -70,12 +85,9 @@ const goToPage = (pageNum: number) => {
 };
 
 // Watch search with debounce
-const debouncedSearch = ref(search.value);
-watch(search, (newVal) => {
-    setTimeout(() => {
-        debouncedSearch.value = newVal;
-        page.value = 1;
-    }, 500);
+const { debouncedValue: debouncedSearch } = useSearchDebounce(search);
+watch(debouncedSearch, () => {
+    page.value = 1;
 });
 
 // Watch filters - reset to page 1
@@ -83,38 +95,6 @@ watch([status, brand, featured], () => {
     page.value = 1;
 });
 
-// Delete product
-const confirmDelete = ref(false);
-const productToDelete = ref<number | null>(null);
-
-const openDeleteModal = (id: number) => {
-    productToDelete.value = id;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!productToDelete.value) return;
-
-    try {
-        await deleteProduct(productToDelete.value);
-        success("Product deleted successfully!");
-        confirmDelete.value = false;
-        productToDelete.value = null;
-        refresh();
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to delete product");
-    }
-};
-
-// Status badge
-const getStatusClass = (status: string) => {
-    const classes: Record<string, string> = {
-        active: "badge-success",
-        inactive: "badge-warning",
-        draft: "badge-ghost",
-    };
-    return classes[status] || "badge-ghost";
-};
 
 // Parse tags
 const parseTags = (tags: string) => {
@@ -329,7 +309,7 @@ const getDisplayUrl = (media: any) => {
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge badge-sm" :class="getStatusClass(product.status)">
+                                    <span class="badge badge-sm" :class="getStatusBadgeClass(product.status)">
                                         {{ capitalize(product.status) }}
                                     </span>
                                 </td>

@@ -8,12 +8,17 @@ import type {
     CouponFormData,
     ValidateCouponRequest,
 } from "~/types/marketing/coupons";
+import type { PaginationParams } from "./usePagination";
 
 export const useCoupons = () => {
     const config = useRuntimeConfig();
     const authStore = useAuthStore();
+    const { buildPaginationParams } = usePagination();
 
-    const getCoupons = (params?: Record<string, any>, options?: { watch?: any[] }) => {
+    const getCoupons = (params?: Partial<PaginationParams>, options?: { watch?: any[] }) => {
+        // Apply default pagination params (per_page: 20)
+        const paginationParams = buildPaginationParams(params);
+
         return useAsyncData<CouponsListResponse>(
             "coupons",
             () =>
@@ -22,7 +27,7 @@ export const useCoupons = () => {
                     headers: {
                         Authorization: `Bearer ${authStore.token}`,
                     },
-                    params,
+                    params: paginationParams,
                 }),
             {
                 watch: options?.watch || [],

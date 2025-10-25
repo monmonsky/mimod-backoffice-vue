@@ -1,14 +1,23 @@
 import type { BrandFormData, BrandsListResponse, BrandDetailResponse, BrandCreateResponse, BrandUpdateResponse, BrandDeleteResponse } from "~/types/catalogs/brands";
+import type { PaginationParams } from "./usePagination";
 
 export const useBrands = () => {
     const config = useRuntimeConfig();
     const authStore = useAuthStore();
+    const { buildPaginationParams } = usePagination();
 
-    const getBrands = (params?: Record<string, any>) => {
+    const getBrands = (params?: Partial<PaginationParams>) => {
+        // Apply default pagination params (per_page: 20)
+        const paginationParams = buildPaginationParams(params);
+
         const query = new URLSearchParams();
-        if (params?.page) query.append("page", params.page.toString());
-        if (params?.per_page) query.append("per_page", params.per_page.toString());
-        if (params?.search) query.append("search", params.search);
+        if (paginationParams.page) query.append("page", paginationParams.page.toString());
+        if (paginationParams.per_page) query.append("per_page", paginationParams.per_page.toString());
+        if (paginationParams.search) query.append("search", paginationParams.search);
+        if (paginationParams.sort) query.append("sort", paginationParams.sort);
+        if (paginationParams.order) query.append("order", paginationParams.order);
+
+        // Custom filters
         if (params?.is_active !== undefined) query.append("is_active", params.is_active.toString());
         if (params?.status) query.append("status", params.status);
 

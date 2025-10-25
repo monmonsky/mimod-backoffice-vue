@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Role } from "~/types/access-control/roles";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
 
 defineProps<Role>();
 
@@ -29,7 +30,7 @@ const openDeleteDialog = () => {
             </span>
         </td>
         <td>
-            <span :class="['badge badge-sm', is_active ? 'badge-success' : 'badge-error']">
+            <span :class="['badge badge-sm', getActiveBadgeClass(is_active)]">
                 {{ is_active ? "Active" : "Inactive" }}
             </span>
         </td>

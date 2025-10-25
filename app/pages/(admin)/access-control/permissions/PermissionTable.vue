@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import PermissionTableRow from "./PermissionTableRow.vue";
 import type { PermissionFilters } from "~/types/access-control/permissions";
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
 
 const { getPermissions } = usePermissions();
 const { getModules } = useModules();
 
 // Fetch modules for filter dropdown
 const { data: modulesResponse } = getModules();
-const modules = computed(() => modulesResponse.value?.data?.data || []);
+const modules = computed(() => {
+    const response = modulesResponse.value as any;
+    return extractListData(response, "data");
+});
 
 const searchQuery = ref("");
 const moduleFilter = ref("");
@@ -52,17 +56,14 @@ const { data: permissionsResponse, pending, error } = await useAsyncData(
     },
 );
 
-const permissions = computed(() => permissionsResponse.value?.data?.data || []);
+const permissions = computed(() => {
+    const response = permissionsResponse.value as any;
+    return extractListData(response, "data");
+});
+
 const pagination = computed(() => {
-    if (!permissionsResponse.value?.data) return null;
-    return {
-        current_page: permissionsResponse.value.data.current_page,
-        last_page: permissionsResponse.value.data.last_page,
-        total: permissionsResponse.value.data.total,
-        from: permissionsResponse.value.data.from,
-        to: permissionsResponse.value.data.to,
-        per_page: permissionsResponse.value.data.per_page,
-    };
+    const response = permissionsResponse.value as any;
+    return extractPaginationMeta(response, "data");
 });
 
 const goToPage = (page: number) => {

@@ -1,8 +1,21 @@
 <script setup lang="ts">
-import { debounce } from "~/utils/helpers";
+import { getStatusBadgeClass, getCustomerSegmentBadgeClass } from "~/utils/statusHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 const { deleteCustomer } = useCustomers();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: customerToDelete,
+    openDeleteModal,
+    handleDelete
+} = useDeleteConfirmation(
+    deleteCustomer,
+    "customer",
+    async () => await refresh()
+);
 
 // Filters
 const search = ref("");
@@ -59,57 +72,16 @@ const goToPage = (pageNum: number) => {
 };
 
 // Watch search with debounce
-watch(search, debounce(() => {
+const { debouncedValue: debouncedSearch } = useSearchDebounce(search);
+watch(debouncedSearch, () => {
     page.value = 1; // Reset to page 1 when searching
-}, 500));
+});
 
 // Watch status - reset to page 1
 watch(status, () => {
     page.value = 1;
 });
 
-// Delete customer
-const confirmDelete = ref(false);
-const customerToDelete = ref<number | null>(null);
-
-const openDeleteModal = (id: number) => {
-    customerToDelete.value = id;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!customerToDelete.value) return;
-
-    try {
-        await deleteCustomer(customerToDelete.value);
-        success("Customer deleted successfully!");
-        confirmDelete.value = false;
-        customerToDelete.value = null;
-        refresh();
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to delete customer");
-    }
-};
-
-// Status badge
-const getStatusClass = (status: string) => {
-    const classes: Record<string, string> = {
-        active: "badge-success",
-        inactive: "badge-warning",
-        suspended: "badge-error",
-    };
-    return classes[status] || "badge-ghost";
-};
-
-// Segment badge
-const getSegmentClass = (segment: string) => {
-    const classes: Record<string, string> = {
-        premium: "badge-primary",
-        standard: "badge-info",
-        basic: "badge-ghost",
-    };
-    return classes[segment] || "badge-ghost";
-};
 </script>
 
 <template>
@@ -171,7 +143,7 @@ const getSegmentClass = (segment: string) => {
                                 <span class="font-medium">{{ formatPrice(customer.total_spent) }}</span>
                             </td>
                             <td>
-                                <span class="badge badge-sm" :class="getStatusClass(customer.status)">
+                                <span class="badge badge-sm" :class="getStatusBadgeClass(customer.status)">
                                     {{ capitalize(customer.status) }}
                                 </span>
                             </td>

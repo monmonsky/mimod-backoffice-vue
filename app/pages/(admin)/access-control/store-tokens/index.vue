@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import StoreTokensGenerateTokenModal from "./GenerateTokenModal.vue";
+import { getErrorMessage } from "~/utils/errorHandlers";
+import { extractNestedValue } from "~/utils/responseHelpers";
 
 definePageMeta({
     layout: "admin",
@@ -14,11 +16,11 @@ const { getTokens, getTokenStats, revokeToken } = useStoreTokens();
 const { success, error: showError } = useToast();
 
 const { data: statsResponse, pending: loadingStats, refresh: refreshStats } = await getTokenStats();
-const stats = computed(() => (statsResponse.value as any)?.data || {});
+const stats = computed(() => extractNestedValue(statsResponse.value, "data", {}));
 
 const { data: tokensResponse, pending: loadingTokens, refresh: refreshTokens } = await getTokens();
-const tokens = computed(() => (tokensResponse.value as any)?.data?.tokens || []);
-const totalTokens = computed(() => (tokensResponse.value as any)?.data?.total || 0);
+const tokens = computed(() => extractNestedValue(tokensResponse.value, "data.tokens", []));
+const totalTokens = computed(() => extractNestedValue(tokensResponse.value, "data.total", 0));
 
 const showGenerateModal = ref(false);
 const showTokenModal = ref(false);
@@ -43,8 +45,8 @@ const handleRevokeToken = async (id: number, name: string) => {
         await refreshTokens();
         await refreshStats();
     } catch (err: any) {
-        showError(err?.data?.message || "Failed to revoke token");
-    } finally {
+        showError(getErrorMessage(err, "Failed to revoke token"));
+    } finally{
         deletingId.value = null;
     }
 };

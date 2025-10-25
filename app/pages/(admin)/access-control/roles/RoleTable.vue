@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import RoleTableRow from "./RoleTableRow.vue";
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
 
 const { getRoles } = useRoles();
 
@@ -43,17 +44,14 @@ const { data: rolesResponse, pending, error } = await useAsyncData(
     },
 );
 
-const roles = computed(() => rolesResponse.value?.data?.data || []);
+const roles = computed(() => {
+    const response = rolesResponse.value as any;
+    return extractListData(response, "data");
+});
+
 const pagination = computed(() => {
-    if (!rolesResponse.value?.data) return null;
-    return {
-        current_page: rolesResponse.value.data.current_page,
-        last_page: rolesResponse.value.data.last_page,
-        total: rolesResponse.value.data.total,
-        from: rolesResponse.value.data.from,
-        to: rolesResponse.value.data.to,
-        per_page: rolesResponse.value.data.per_page,
-    };
+    const response = rolesResponse.value as any;
+    return extractPaginationMeta(response, "data");
 });
 
 const goToPage = (page: number) => {

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Module } from "~/types/access-control/modules";
+import { getActiveBadgeClass, getVisibleBadgeClass } from "~/utils/statusHelpers";
 
 defineProps<Module>();
 </script>
@@ -25,12 +26,12 @@ defineProps<Module>();
             <span class="badge badge-ghost badge-sm">{{ sort_order }}</span>
         </td>
         <td>
-            <span :class="['badge badge-sm', is_active ? 'badge-success' : 'badge-error']">
+            <span :class="['badge badge-sm', getActiveBadgeClass(is_active)]">
                 {{ is_active ? "Active" : "Inactive" }}
             </span>
         </td>
         <td>
-            <span :class="['badge badge-sm', is_visible ? 'badge-info' : 'badge-ghost']">
+            <span :class="['badge badge-sm', getVisibleBadgeClass(is_visible)]">
                 {{ is_visible ? "Visible" : "Hidden" }}
             </span>
         </td>

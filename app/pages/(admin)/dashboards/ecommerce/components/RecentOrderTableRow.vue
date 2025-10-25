@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getOrderStatusBadgeClass } from "~/utils/statusHelpers";
+
 export type IRecentOrderTableRow = {
     image: string;
     name: string;
@@ -8,6 +10,18 @@ export type IRecentOrderTableRow = {
 };
 
 defineProps<IRecentOrderTableRow>();
+
+// Map dashboard status to standard order status
+const getStatusClass = (status: string) => {
+    const mapping: Record<string, string> = {
+        delivered: "completed",
+        on_going: "processing",
+        confirmed: "processing",
+        canceled: "cancelled",
+        waiting: "pending"
+    };
+    return getOrderStatusBadgeClass(mapping[status] || status);
+};
 </script>
 <template>
     <tr>
@@ -21,11 +35,9 @@ defineProps<IRecentOrderTableRow>();
         <td class="font-medium">${{ price }}</td>
         <td class="text-xs">{{ date }}</td>
         <td>
-            <div v-if="status === 'delivered'" class="badge badge-success badge-sm badge-soft">Delivered</div>
-            <div v-else-if="status === 'on_going'" class="badge badge-info badge-sm badge-soft">On Going</div>
-            <div v-else-if="status === 'confirmed'" class="badge badge-primary badge-sm badge-soft">Confirmed</div>
-            <div v-else-if="status === 'canceled'" class="badge badge-error badge-sm badge-soft">Canceled</div>
-            <div v-else-if="status === 'waiting'" class="badge badge-secondary badge-sm badge-soft">Waiting</div>
+            <div :class="['badge badge-sm badge-soft', getStatusClass(status)]">
+                {{ status === 'on_going' ? 'On Going' : status.charAt(0).toUpperCase() + status.slice(1) }}
+            </div>
         </td>
         <td>
             <div class="flex items-center gap-1">

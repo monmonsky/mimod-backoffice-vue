@@ -1,6 +1,22 @@
 <script setup lang="ts">
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
+
 const { deleteCategory } = useCategories();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: categoryToDelete,
+    openDeleteModal: openDeleteModalComposable,
+    handleDelete
+} = useDeleteConfirmation(
+    (category: any) => deleteCategory(category.id),
+    "category",
+    async () => await refresh()
+);
 
 const searchQuery = ref("");
 const activeFilter = ref<boolean | "">("");
@@ -35,51 +51,20 @@ const { data: categoriesResponse, pending, error, refresh } = await useAsyncData
 
 const categories = computed(() => {
     const response = categoriesResponse.value as any;
-    // Handle structure: { data: { categories: { data: [...] } } }
-    return response?.data?.categories?.data || [];
+    return extractListData(response, "data.categories");
 });
 
 const pagination = computed(() => {
     const response = categoriesResponse.value as any;
-    const paginationData = response?.data?.categories;
-    if (paginationData) {
-        return {
-            current_page: paginationData.current_page || 1,
-            last_page: paginationData.last_page || 1,
-            per_page: paginationData.per_page || 15,
-            total: paginationData.total || 0,
-            from: paginationData.from || 0,
-            to: paginationData.to || 0,
-        };
-    }
-    return null;
+    return extractPaginationMeta(response, "data.categories");
 });
 
 const goToPage = (page: number) => {
     currentPage.value = page;
 };
 
-const confirmDelete = ref(false);
-const categoryToDelete = ref<any>(null);
-
 const openDeleteModal = (category: any) => {
-    categoryToDelete.value = category;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!categoryToDelete.value) return;
-
-    try {
-        await deleteCategory(categoryToDelete.value.id);
-        success("Category deleted successfully!");
-        confirmDelete.value = false;
-        categoryToDelete.value = null;
-        await refresh();
-    } catch (err: any) {
-        const errorMessage = err?.data?.message || "Failed to delete category";
-        showError(errorMessage);
-    }
+    openDeleteModalComposable(category);
 };
 </script>
 <template>
@@ -182,7 +167,7 @@ const handleDelete = async () => {
                                     <span class="badge badge-ghost badge-sm">{{ category.sort_order }}</span>
                                 </td>
                                 <td>
-                                    <span class="badge badge-sm" :class="category.is_active ? 'badge-success' : 'badge-error'">
+                                    <span class="badge badge-sm" :class="getActiveBadgeClass(category.is_active)">
                                         {{ category.is_active ? "Active" : "Inactive" }}
                                     </span>
                                 </td>

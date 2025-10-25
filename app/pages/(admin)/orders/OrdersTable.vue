@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { formatPrice, formatDate } from "~/utils/formatters";
+import { getOrderStatusBadgeClass, getPaymentStatusBadgeClass } from "~/utils/statusHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
 import UpdateStatusModal from "./UpdateStatusModal.vue";
 import UpdatePaymentModal from "./UpdatePaymentModal.vue";
 import DetailModal from "./DetailModal.vue";
@@ -99,21 +101,6 @@ const showStatusModal = ref(false);
 const showPaymentModal = ref(false);
 const showDetailModal = ref(false);
 
-const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-        pending: "badge-warning",
-        processing: "badge-info",
-        shipped: "badge-primary",
-        completed: "badge-success",
-        cancelled: "badge-error",
-    };
-    return colors[status] || "badge-ghost";
-};
-
-const getPaymentStatusColor = (status: string) => {
-    return status === "paid" ? "badge-success" : "badge-warning";
-};
-
 const handleStatusUpdated = () => {
     refresh();
     showStatusModal.value = false;
@@ -166,7 +153,7 @@ const handleSendInvoice = async (order: any) => {
         await sendInvoiceEmail(order.id);
         success(`Invoice sent to ${order.customer.email}`);
     } catch (err: any) {
-        showError(err?.data?.message || "Failed to send invoice email");
+        showError(getErrorMessage(err, "Failed to send invoice email"));
     }
 };
 
@@ -357,7 +344,7 @@ const handleAction = (action: string, order: any) => {
                                 <td class="font-medium">{{ formatPrice(order?.total_amount || 0) }}</td>
                                 <td>
                                     <div class="flex items-center gap-1">
-                                        <span :class="['badge badge-sm', getStatusColor(order?.status || '')]">
+                                        <span :class="['badge badge-sm', getOrderStatusBadgeClass(order?.status)]">
                                             {{ order?.status || 'N/A' }}
                                         </span>
                                         <span
@@ -368,7 +355,7 @@ const handleAction = (action: string, order: any) => {
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-1">
-                                        <span :class="['badge badge-sm', getPaymentStatusColor(order?.payment_status || '')]">
+                                        <span :class="['badge badge-sm', getPaymentStatusBadgeClass(order?.payment_status)]">
                                             {{ order?.payment_status || 'N/A' }}
                                         </span>
                                         <span

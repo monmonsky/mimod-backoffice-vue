@@ -1,0 +1,357 @@
+# API Endpoints Reference
+
+Complete list of all API endpoints used in Mimod Backoffice project.
+
+**Base URL:** Configured in `runtimeConfig.public.apiBase`
+**Authentication:** Bearer token in `Authorization` header
+**Response Format:** JSON
+
+---
+
+## AUTHENTICATION
+- `POST /auth/login` - User login
+- `POST /auth/logout` - User logout
+
+---
+
+## DASHBOARD
+- `GET /dashboard/statistics` - Get dashboard statistics
+- `GET /dashboard/sales-chart` - Get sales chart data
+- `GET /dashboard/recent-orders` - Get recent orders
+- `GET /dashboard/top-products` - Get top products
+
+---
+
+## CATALOG - PRODUCTS
+- `GET /catalog/products` - List all products
+- `POST /catalog/products` - Create product
+- `GET /catalog/products/{id}` - Get product details
+- `PUT /catalog/products/{id}` - Update product
+- `DELETE /catalog/products/{id}` - Delete product
+- `PATCH /catalog/products/{id}/status` - Update product status
+- `GET /catalog/products/brand/{brandId}` - Get products by brand
+- `GET /catalog/products/category/{categoryId}` - Get products by category
+
+---
+
+## CATALOG - VARIANTS
+- `GET /catalog/products/variants` - List variants
+- `POST /catalog/products/variants` - Create variant
+- `GET /catalog/products/variants/{id}` - Get variant details
+- `PUT /catalog/products/variants/{id}` - Update variant
+- `DELETE /catalog/products/variants/{id}` - Delete variant
+- `POST /catalog/products/variants/{id}/generate-sku-barcode` - Generate SKU and barcode
+- `GET /catalog/products/{productId}/variants` - Get variants for product
+
+---
+
+## CATALOG - CATEGORIES
+- `GET /catalog/categories` - List categories
+- `POST /catalog/categories` - Create category
+- `GET /catalog/categories/{id}` - Get category details
+- `PUT /catalog/categories/{id}` - Update category
+- `DELETE /catalog/categories/{id}` - Delete category
+
+---
+
+## CATALOG - BRANDS
+- `GET /catalog/brands` - List brands
+- `POST /catalog/brands` - Create brand
+- `GET /catalog/brands/{id}` - Get brand details
+- `PUT /catalog/brands/{id}` - Update brand
+- `DELETE /catalog/brands/{id}` - Delete brand
+
+---
+
+## CATALOG - ATTRIBUTES
+- `GET /catalog/attributes` - List attributes
+- `POST /catalog/attributes` - Create attribute
+- `GET /catalog/attributes/{id}` - Get attribute details
+- `PUT /catalog/attributes/{id}` - Update attribute
+- `DELETE /catalog/attributes/{id}` - Delete attribute
+- `POST /catalog/attribute-values` - Create attribute value
+- `POST /catalog/attribute-values/bulk` - Bulk create attribute values
+- `PUT /catalog/attribute-values/{id}` - Update attribute value
+- `DELETE /catalog/attribute-values/{id}` - Delete attribute value
+- `POST /catalog/product-variant-attributes` - Create product variant attributes
+
+---
+
+## ORDERS
+- `GET /orders` - List orders
+- `POST /orders` - Create order
+- `GET /orders/{id}` - Get order details
+- `PUT /orders/{id}` - Update order
+- `DELETE /orders/{id}` - Delete order
+- `PATCH /orders/{id}/status` - Update order status
+- `PATCH /orders/{id}/payment` - Update payment status
+- `POST /orders/{id}/send-invoice` - Send invoice email
+- `GET /orders/customer/{customerId}` - Get orders by customer
+
+---
+
+## CUSTOMERS
+- `GET /customers` - List customers
+- `POST /customers` - Create customer
+- `GET /customers/{id}` - Get customer details
+- `PUT /customers/{id}` - Update customer
+- `DELETE /customers/{id}` - Delete customer
+
+---
+
+## MARKETING - COUPONS
+- `GET /marketing/coupons` - List coupons
+- `POST /marketing/coupons` - Create coupon
+- `GET /marketing/coupons/{id}` - Get coupon details
+- `PUT /marketing/coupons/{id}` - Update coupon
+- `DELETE /marketing/coupons/{id}` - Delete coupon
+- `POST /marketing/coupons/validate` - Validate coupon
+
+---
+
+## ACCESS CONTROL - USERS
+- `GET /access-control/users` - List users
+- `POST /access-control/users` - Create user
+- `GET /access-control/users/{id}` - Get user details
+- `PUT /access-control/users/{id}` - Update user
+- `DELETE /access-control/users/{id}` - Delete user
+
+---
+
+## ACCESS CONTROL - ROLES
+- `GET /access-control/roles` - List roles
+- `GET /access-control/roles/{id}` - Get role details
+- `PUT /access-control/roles/{id}` - Update role
+- `GET /access-control/roles/{id}/permissions/grouped` - Get role permissions (grouped)
+- `POST /access-control/roles/{id}/permissions/sync` - Sync role permissions
+
+---
+
+## ACCESS CONTROL - MODULES
+- `GET /access-control/modules` - List modules
+- `GET /access-control/modules/{id}` - Get module details
+- `PUT /access-control/modules/{id}` - Update module
+- `POST /access-control/modules/reorder` - Reorder modules
+
+---
+
+## ACCESS CONTROL - STORE TOKENS
+- `GET /access-control/store-tokens` - List store tokens
+- `GET /access-control/store-tokens/stats` - Get token statistics
+- `GET /access-control/store-tokens/{id}` - Get token details
+- `POST /access-control/store-tokens/generate` - Generate token
+- `DELETE /access-control/store-tokens/{id}` - Revoke token
+
+---
+
+## ACCESS CONTROL - USER ACTIVITIES
+- `GET /access-control/user-activities` - List user activities
+- `GET /access-control/user-activities/{id}` - Get activity details
+
+---
+
+## UPLOADS - IMAGES
+- `POST /upload/image` - Upload single image
+- `POST /upload/image/bulk` - Upload multiple images
+- `PATCH /upload/product-image/{id}/set-primary` - Set primary product image
+- `DELETE /upload/product-image/{id}` - Delete product image
+
+---
+
+## UPLOADS - MEDIA
+- `POST /upload/media` - Upload media (image or video)
+- `POST /upload/temp` - Upload to temporary storage
+- `POST /upload/move` - Move images from temp to permanent
+
+### Image Upload Flow Example
+```typescript
+// Step 1: Upload to temp
+const response = await uploadTempImages(files, {
+  type: 'product',
+  maxSizeMB: 10,
+  allowedTypes: ['image/jpeg', 'image/png', 'image/webp']
+})
+
+// Step 2: Move to permanent storage
+await moveImages({
+  temp_paths: response.data.images.map(img => img.path),
+  type: 'variant',
+  product_id: 123,
+  variant_id: 456,
+  metadata: response.data.images.map(img => ({
+    media_type: 'image',
+    file_size: img.file_size
+  }))
+})
+```
+
+---
+
+## APPEARANCE - NAVIGATION (MENUS)
+- `GET /appearance/navigation/menus` - List menus
+- `POST /appearance/navigation/menus` - Create menu
+- `GET /appearance/navigation/menus/{id}` - Get menu details
+- `PUT /appearance/navigation/menus/{id}` - Update menu
+- `DELETE /appearance/navigation/menus/{id}` - Delete menu
+- `GET /appearance/navigation/menus/parents` - Get parent menus
+- `POST /appearance/navigation/menus/reorder` - Reorder menus
+- `POST /appearance/navigation/menus/bulk-create-categories` - Bulk create category menus
+- `POST /appearance/navigation/menus/bulk-create-brands` - Bulk create brand menus
+- `GET /menus/location` - Get menus by location
+
+---
+
+## SETTINGS
+- `GET /settings/{key}` - Get settings by key
+- `PUT /settings/{key}` - Update settings
+
+---
+
+## EMAIL
+- `POST /email/test-connection` - Test email connection
+
+---
+
+## AI/SEO
+- `POST /ai/generate-seo` - Generate SEO content with AI
+
+**Request Body Example:**
+```json
+{
+  "title": "Product Name",
+  "description": "Product description...",
+  "type": "product"
+}
+```
+
+**Response Example:**
+```json
+{
+  "seo_title": "Optimized SEO Title",
+  "seo_description": "Optimized meta description...",
+  "seo_keywords": "keyword1, keyword2, keyword3"
+}
+```
+
+---
+
+## SUMMARY STATISTICS
+- **Total Endpoints:** 106
+- **GET Requests:** 43
+- **POST Requests:** 36
+- **PUT Requests:** 11
+- **PATCH Requests:** 4
+- **DELETE Requests:** 12
+- **Total Modules:** 21
+
+---
+
+## Common Request/Response Patterns
+
+### Pagination (List Endpoints)
+**Request Query Parameters:**
+```
+?page=1&per_page=10&sort=created_at&order=desc&search=query
+```
+
+**Response:**
+```json
+{
+  "data": [...],
+  "meta": {
+    "current_page": 1,
+    "per_page": 10,
+    "total": 100,
+    "last_page": 10
+  }
+}
+```
+
+### Success Response
+```json
+{
+  "status": true,
+  "statusCode": "200",
+  "message": "Success message",
+  "data": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "status": false,
+  "statusCode": "400",
+  "message": "Error message",
+  "errors": {
+    "field_name": ["Validation error message"]
+  }
+}
+```
+
+### Upload Response (Temp)
+```json
+{
+  "status": true,
+  "statusCode": "200",
+  "message": "Images uploaded successfully",
+  "data": {
+    "images": [
+      {
+        "url": "http://storage.example.com/temp/abc123.jpg",
+        "path": "temp/abc123.jpg",
+        "filename": "abc123.jpg",
+        "file_size": 123456,
+        "media_type": "image"
+      }
+    ],
+    "count": 1,
+    "type": "product",
+    "session_id": "xyz789"
+  }
+}
+```
+
+### Upload Response (Move)
+```json
+{
+  "status": true,
+  "statusCode": "200",
+  "message": "Images moved successfully",
+  "data": {
+    "images": [
+      {
+        "id": 1,
+        "url": "http://storage.example.com/products/123/abc123.jpg",
+        "path": "products/123/abc123.jpg",
+        "is_primary": false,
+        "sort_order": 0
+      }
+    ],
+    "count": 1,
+    "product_id": 123,
+    "variant_id": 456
+  }
+}
+```
+
+---
+
+## Usage in Composables
+
+All API calls are abstracted in composables located in `/app/composables/`.
+
+**Example:**
+```typescript
+// In your component
+const { fetchProducts, createProduct } = useProducts()
+const { uploadTempImages, moveImages } = useImageUpload()
+
+// Fetch products
+const products = await fetchProducts({ page: 1, per_page: 10 })
+
+// Create product
+const newProduct = await createProduct(productData)
+```
+
+See individual composable files for detailed function signatures and usage.

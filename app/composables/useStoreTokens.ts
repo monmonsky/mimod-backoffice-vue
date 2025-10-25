@@ -1,8 +1,14 @@
+import type { PaginationParams } from "./usePagination";
+
 export const useStoreTokens = () => {
     const config = useRuntimeConfig();
     const authStore = useAuthStore();
+    const { buildPaginationParams } = usePagination();
 
-    const getTokens = (params?: Record<string, any>) => {
+    const getTokens = (params?: Partial<PaginationParams>) => {
+        // Apply default pagination params (per_page: 20)
+        const paginationParams = buildPaginationParams(params);
+
         return useAsyncData(
             "store-tokens",
             () =>
@@ -11,7 +17,7 @@ export const useStoreTokens = () => {
                     headers: {
                         Authorization: `Bearer ${authStore.token}`,
                     },
-                    params,
+                    params: paginationParams,
                 }),
             {
                 watch: params ? [() => params] : [],

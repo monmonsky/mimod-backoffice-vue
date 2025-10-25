@@ -1,0 +1,312 @@
+# Mimod Backoffice - Project Overview
+
+## Project Information
+- **Project Name:** Mimod Backoffice (Vue Admin Dashboard)
+- **Framework:** Nuxt.js 4.1.3
+- **Core Technologies:** Vue 3.5.22, TypeScript, Tailwind CSS 4, daisyUI 5.1.29, Pinia
+- **Icons:** Iconify (lucide icons)
+- **Package Manager:** Bun
+- **Development Server:** `bun run dev --port=3004`
+
+## Project Architecture
+
+### Root Configuration Files
+- `package.json`: Project dependencies and scripts
+- `nuxt.config.ts`: Nuxt framework configuration (modules, CSS, SEO, etc.)
+- `tsconfig.json`: TypeScript compiler configuration
+- `bun.lock`: Bun package lock file
+
+### Directory Structure
+
+#### `/app` - Main Application Directory
+- `app.vue`: Root Vue component entry point
+- `error.vue`: Global error page
+
+#### `/app/assets`
+- `styles/`: Global CSS files
+  - `app.css`: Main CSS entry point (imports Tailwind CSS 4)
+
+#### `/app/components`
+Reusable Vue components organized by feature:
+- `admin-layout/`: Layout components (Sidebar, Topbar, Footer, etc.)
+- Other UI components
+
+#### `/app/composables`
+Reusable Vue composition functions:
+- `useProducts.ts`: Product CRUD operations
+- `useCategories.ts`: Category CRUD operations
+- `useBrands.ts`: Brand CRUD operations
+- `useAttributes.ts`: Attribute and attribute values management
+- `useOrders.ts`: Order management
+- `useCustomers.ts`: Customer management
+- `useCoupons.ts`: Coupon/discount management
+- `useUsers.ts`: User management
+- `useRoles.ts`: Role and permission management
+- `useMenus.ts`: Navigation menu management
+- `useImageUpload.ts`: Image upload (single, bulk, temp, move)
+- `useMediaUpload.ts`: Media upload (images and videos)
+- `useMediaUrl.ts`: Media URL helper
+- `useAISeo.ts`: AI-powered SEO generation
+- `useDashboard.ts`: Dashboard statistics
+- `useSettings.ts`: Application settings
+- And more...
+
+#### `/app/layouts`
+Named layouts for different sections:
+- `admin.vue`: Main admin dashboard layout
+- `auth.vue`: Authentication pages layout
+- `default.vue`: Default layout
+
+#### `/app/pages`
+File-based routing pages organized by feature:
+- `(admin)/`: Admin dashboard pages (protected routes)
+  - `catalogs/`: Product catalog management
+    - `products/`: Products, variants, bulk generator
+    - `categories/`: Categories
+    - `brands/`: Brands
+    - `attributes/`: Product attributes and values
+  - `orders/`: Order management
+  - `customers/`: Customer management
+  - `marketing/`: Marketing tools (coupons, etc.)
+  - `access-control/`: User, role, permission management
+  - `appearance/`: Navigation menus, themes
+  - `settings/`: Application settings
+- `auth/`: Authentication pages (login, register, etc.)
+- `index.vue`: Dashboard home page
+
+#### `/app/stores`
+Pinia state management:
+- `auth.ts`: Authentication state (user, token, login/logout)
+- `config.ts`: App configuration (theme, sidebar state, etc.)
+
+#### `/app/types`
+TypeScript type definitions organized by module:
+- `catalogs/`: Product, variant, category, brand, attribute types
+- `orders/`: Order types
+- `customers/`: Customer types
+- `auth/`: Auth types
+- And more...
+
+#### `/public`
+Static assets served directly:
+- `images/`: Static images
+- `js/`: Static JavaScript files
+
+#### `/server`
+Server-side logic (API routes, middleware) - available for extension
+
+## Key Features
+
+### 1. Authentication & Authorization
+- JWT-based authentication
+- Role-based access control (RBAC)
+- Permission management
+- Store tokens for API access
+
+### 2. Product Catalog Management
+- Products with multiple variants
+- Categories (hierarchical)
+- Brands
+- Product attributes (size, color, etc.) with values
+- Bulk variant generator (generate all combinations)
+- Bulk variant editor (edit multiple variants at once)
+- Image and video upload for products and variants
+- SKU and barcode auto-generation
+
+### 3. Order Management
+- Create, read, update, delete orders
+- Order status tracking
+- Payment status management
+- Send invoice emails
+
+### 4. Customer Management
+- Customer CRUD operations
+- Customer order history
+
+### 5. Marketing
+- Coupon/discount management
+- Coupon validation
+- AI-powered SEO content generation
+
+### 6. Navigation & Appearance
+- Dynamic menu management
+- Bulk create menus from categories/brands
+- Menu reordering
+
+### 7. Settings
+- Email configuration with test connection
+- General application settings
+
+### 8. Dashboard
+- Statistics overview
+- Sales charts
+- Recent orders
+- Top products
+
+## API Architecture
+
+### Base Configuration
+- **Base URL:** Configured in `nuxt.config.ts` as `runtimeConfig.public.apiBase`
+- **Authentication:** Bearer token in `Authorization` header
+- **Response Format:** JSON
+
+### API Modules
+All API endpoints are organized by module:
+- `/auth/*` - Authentication
+- `/catalog/*` - Product catalog (products, variants, categories, brands, attributes)
+- `/orders/*` - Order management
+- `/customers/*` - Customer management
+- `/marketing/*` - Marketing tools
+- `/access-control/*` - User, role, permission management
+- `/appearance/*` - Navigation menus
+- `/upload/*` - Image and media uploads
+- `/settings/*` - Application settings
+- `/dashboard/*` - Dashboard statistics
+- `/ai/*` - AI services (SEO generation)
+
+See `API_ENDPOINTS.md` for complete list of all endpoints.
+
+## Styling System
+
+### Tailwind CSS 4 + daisyUI 5
+- Modern CSS-based configuration (no `tailwind.config.js`)
+- Main CSS file: `app/assets/styles/app.css`
+- daisyUI plugin for UI components
+- Custom theme configuration via CSS variables
+
+### Design System
+- **Colors:** Uses daisyUI semantic colors (primary, secondary, accent, neutral, base, etc.)
+- **Components:** Built with daisyUI components + Tailwind utilities
+- **Icons:** Iconify with lucide icon set
+- **Typography:** Responsive typography system
+- **Spacing:** Consistent spacing scale
+- **Responsive:** Mobile-first responsive design
+
+## Development Workflow
+
+### Running the Application
+```bash
+# Install dependencies
+bun install
+
+# Run development server
+bun run dev --port=3004
+
+# Build for production
+bun run build
+
+# Preview production build
+bun run preview
+```
+
+### Code Style
+- **TypeScript:** Strict mode enabled
+- **Composition API:** Use `<script setup lang="ts">`
+- **Auto-imports:** Components, composables, and stores are auto-imported (Nuxt feature)
+- **Type Safety:** Always define proper TypeScript types
+- **Avoid `any`:** Use specific types whenever possible
+
+### Component Structure
+```vue
+<script setup lang="ts">
+// Imports
+import type { YourType } from '~/types/...'
+
+// Props & Emits
+interface Props {
+  propName: string
+}
+const props = defineProps<Props>()
+const emit = defineEmits<{ eventName: [payload: Type] }>()
+
+// Composables
+const { success, error } = useToast()
+
+// State
+const loading = ref(false)
+
+// Functions
+const handleAction = async () => {
+  // Implementation
+}
+
+// Lifecycle
+onMounted(() => {
+  // Initialize
+})
+</script>
+
+<template>
+  <!-- Template using daisyUI components -->
+</template>
+```
+
+## Important Notes
+
+### Image Upload Flow
+1. Upload to temp: `POST /upload/temp` → Get temp paths
+2. Move to permanent: `POST /upload/move` → Get final URLs with IDs
+3. Always include metadata (media_type, file_size, etc.)
+
+### Variant Management
+- Variants are created from product attributes
+- SKU and Barcode are auto-generated via API
+- Bulk operations for generating and editing variants
+- Each variant can have its own images
+
+### State Management
+- Use Pinia stores for global state
+- Use composables for reusable logic
+- Use refs/computed for component-local state
+
+### Error Handling
+- All API calls wrapped in try-catch
+- Toast notifications for success/error messages
+- Loading states for async operations
+- Proper TypeScript error typing
+
+### Localization
+- i18n has been removed (previously used @nuxtjs/i18n)
+- All text is hardcoded in English
+- Language switcher is disabled
+
+## Recent Changes & Known Issues
+
+### Recently Fixed
+- Dev server stuck issue (missing lightningcss module)
+- i18n removal (replaced with hardcoded English text)
+- Bulk variant Apply buttons (added `type="button"`)
+- Bulk variant state reset after save
+- Image upload in bulk variant generator
+- moveImages payload (added required `product_id`)
+- Auto SKU/Barcode generation
+- BulkEditVariants component created and integrated
+
+### Active Features
+- Product management with variants
+- Bulk variant generator
+- Bulk variant editor
+- Attribute management
+- Image and media uploads
+- Navigation menu management
+- AI-powered SEO generation
+
+## File Naming Conventions
+- Components: PascalCase (e.g., `ProductCard.vue`)
+- Pages: kebab-case (e.g., `products/[id]/edit.vue`)
+- Composables: camelCase with `use` prefix (e.g., `useProducts.ts`)
+- Types: PascalCase for interfaces (e.g., `Product`, `ProductVariant`)
+- Stores: camelCase (e.g., `auth.ts`, `config.ts`)
+
+## Best Practices
+
+1. **Always use TypeScript** - Define proper types for all data structures
+2. **Use composables** - Extract reusable logic into composables
+3. **Component composition** - Break down complex UIs into smaller components
+4. **Loading states** - Always show loading indicators for async operations
+5. **Error handling** - Handle errors gracefully with user-friendly messages
+6. **Validation** - Validate user input before API calls
+7. **Accessibility** - Use semantic HTML and ARIA attributes
+8. **Performance** - Use lazy loading and code splitting where appropriate
+9. **Consistency** - Follow existing patterns in the codebase
+10. **Documentation** - Add comments for complex logic

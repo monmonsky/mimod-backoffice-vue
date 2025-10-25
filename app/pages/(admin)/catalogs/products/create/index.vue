@@ -5,7 +5,6 @@ definePageMeta({
     layout: "admin",
 });
 
-const { t } = useI18n();
 const { createProduct } = useProducts();
 const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
@@ -144,16 +143,16 @@ const handleFileUpload = async (event: Event) => {
 
         let message = '';
         if (imageCount > 0 && videoCount > 0) {
-            message = t('product.success.mediaUploaded', { imageCount, videoCount });
+            message = `${imageCount} image(s) and ${videoCount} video(s) uploaded successfully`;
         } else if (videoCount > 0) {
-            message = t('product.success.videoUploaded', { count: videoCount });
+            message = `${videoCount} video(s) uploaded successfully`;
         } else {
-            message = t('product.success.imageUploaded', { count: imageCount });
+            message = `${imageCount} image(s) uploaded successfully`;
         }
 
         success(message);
     } catch (err: any) {
-        showError(err.message || t('product.error.uploadFailed'));
+        showError(err.message || 'Failed to upload media');
     } finally {
         uploading.value = false;
     }
@@ -206,10 +205,10 @@ const handleGenerateSeo = async () => {
             form.value.seo_meta.title = response.data.title;
             form.value.seo_meta.description = response.data.description;
             form.value.seo_meta.keywords = response.data.keywords;
-            success(t('product.success.seoGenerated'));
+            success('SEO metadata generated successfully');
         }
     } catch (err: any) {
-        showError(err?.data?.message || t('product.error.seoGenerateFailed'));
+        showError(err?.data?.message || 'Failed to generate SEO metadata');
     } finally {
         generatingSeo.value = false;
     }
@@ -218,17 +217,17 @@ const handleGenerateSeo = async () => {
 // Submit form
 const handleSubmit = async () => {
     if (!form.value.name) {
-        showError(t('product.validation.nameRequired'));
+        showError('Product name is required');
         return;
     }
 
     if (!form.value.brand_id) {
-        showError(t('product.validation.brandRequired'));
+        showError('Brand is required');
         return;
     }
 
     if (selectedCategories.value.length === 0) {
-        showError(t('product.validation.categoryRequired'));
+        showError('At least one category is required');
         return;
     }
 
@@ -297,7 +296,7 @@ const handleSubmit = async () => {
             console.log("==============================");
         }
 
-        success(t('product.success.created'));
+        success('Product created successfully');
 
         // Redirect to Step 2: Add Variants (SPA navigation without reload)
         const redirectUrl = `/catalogs/products/create/${productId}/variants`;
@@ -305,7 +304,7 @@ const handleSubmit = async () => {
         // Don't reset loading here, let the navigation complete
         await navigateTo(redirectUrl);
     } catch (err: any) {
-        showError(err?.data?.message || t('product.error.createFailed'));
+        showError(err?.data?.message || 'Failed to create product');
         loading.value = false;
     }
 };
@@ -314,8 +313,8 @@ const handleSubmit = async () => {
 <template>
     <div>
         <PageTitle
-            :title="$t('product.create')"
-            :items="[{ label: $t('nav.catalogs') }, { label: $t('nav.products'), path: '/catalogs/products' }, { label: $t('common.create'), active: true }]" />
+            :title="'Create Product'"
+            :items="[{ label: 'Catalogs' }, { label: 'Products', path: '/catalogs/products' }, { label: 'Create', active: true }]" />
 
         <div class="mt-6">
             <form @submit.prevent="handleSubmit">
@@ -323,22 +322,22 @@ const handleSubmit = async () => {
                     <!-- Basic Information -->
                     <div class="card bg-base-100 shadow">
                         <div class="card-body">
-                            <div class="card-title">{{ $t('product.info.basicInformation') }}</div>
+                            <div class="card-title">Basic Information</div>
                             <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
                                 <div class="space-y-2">
                                     <label class="fieldset-label" for="name">
-                                        {{ $t('product.name') }} <span class="text-error">*</span>
+                                        Product Name <span class="text-error">*</span>
                                     </label>
                                     <input
                                         id="name"
                                         v-model="form.name"
                                         type="text"
                                         class="input w-full"
-                                        :placeholder="$t('product.name')"
+                                        placeholder="Product Name"
                                         required />
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="fieldset-label" for="slug">{{ $t('product.slug') }}</label>
+                                    <label class="fieldset-label" for="slug">Slug</label>
                                     <input
                                         id="slug"
                                         v-model="form.slug"
@@ -482,7 +481,7 @@ const handleSubmit = async () => {
                         <div class="card-body">
                             <div class="card-title">
                                 <span class="iconify lucide--images size-5" />
-                                {{ $t('product.media.title') }}
+                                Product Media
                             </div>
                             <div class="mt-2">
                                 <!-- Preview media -->
@@ -517,7 +516,7 @@ const handleSubmit = async () => {
                                             <!-- Media Type Badge -->
                                             <div v-if="media.media_type === 'video'" class="absolute top-2 left-2 badge badge-primary badge-sm gap-1 z-10">
                                                 <span class="iconify lucide--video size-3" />
-                                                {{ $t('product.media.video') }}
+                                                Video
                                             </div>
 
                                             <!-- Video Duration -->
@@ -540,12 +539,12 @@ const handleSubmit = async () => {
                                     <div class="border-2 border-dashed border-base-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
                                         <span class="iconify lucide--upload-cloud text-base-content/40 mb-2 size-10 block mx-auto" />
                                         <p class="text-base-content/60 mb-3 text-sm">
-                                            {{ tempMedia.length > 0 ? $t('product.media.addMore') : $t('product.media.uploadMedia') }}
+                                            {{ tempMedia.length > 0 ? 'Add more media' : 'Upload images or videos' }}
                                         </p>
                                         <label class="btn btn-primary btn-sm">
                                             <span v-if="uploading" class="loading loading-spinner loading-xs"></span>
                                             <span v-else class="iconify lucide--upload size-4" />
-                                            {{ uploading ? $t('product.media.uploading') : $t('product.media.upload') }}
+                                            {{ uploading ? 'Uploading...' : 'Upload Media' }}
                                             <input type="file" accept="image/*,video/*" multiple class="hidden" @change="handleFileUpload" :disabled="uploading" />
                                         </label>
                                     </div>
@@ -554,8 +553,8 @@ const handleSubmit = async () => {
                                 <div class="alert alert-info mt-3">
                                     <span class="iconify lucide--info size-4" />
                                     <div class="text-xs">
-                                        <p>{{ $t('product.media.imageInfo') }}</p>
-                                        <p>{{ $t('product.media.videoInfo') }}</p>
+                                        <p>Supported image formats: JPEG, PNG, GIF, WebP. Max 10MB per file.</p>
+                                        <p>Supported video formats: MP4, MOV, AVI. Max 100MB per file.</p>
                                     </div>
                                 </div>
                             </div>
@@ -568,7 +567,7 @@ const handleSubmit = async () => {
                             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                                 <div class="card-title">
                                     <span class="iconify lucide--search size-5" />
-                                    {{ $t('product.seo.title') }}
+                                    SEO Metadata
                                 </div>
                                 <div class="flex flex-col items-end gap-1">
                                     <button
@@ -578,17 +577,17 @@ const handleSubmit = async () => {
                                         :disabled="generatingSeo || !form.name || !form.description">
                                         <span v-if="generatingSeo" class="loading loading-spinner loading-xs"></span>
                                         <span v-else class="iconify lucide--sparkles size-4" />
-                                        {{ generatingSeo ? $t('common.loading') : $t('product.seo.generateBySeo') }}
+                                        {{ generatingSeo ? 'Generating...' : 'Generate with AI' }}
                                     </button>
                                     <p v-if="!form.name || !form.description" class="text-xs text-warning">
-                                        {{ $t('product.validation.descriptionRequired') }}
+                                        Name and description required
                                     </p>
                                 </div>
                             </div>
                             <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
                                 <div class="space-y-2">
                                     <label class="fieldset-label" for="seo_title">
-                                        {{ $t('product.seo.seoTitle') }}
+                                        SEO Title
                                     </label>
                                     <input
                                         id="seo_title"

@@ -22,7 +22,6 @@
         "node": ">=20.18.0"
     },
     "dependencies": {
-        "@nuxtjs/i18n": "^10.1.1",
         "@pinia/nuxt": "^0.11.2",
         "@tanstack/vue-table": "^8.21.3",
         "apexcharts": "^5.3.4",

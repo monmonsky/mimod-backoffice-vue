@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UserTableRow from "./UserTableRow.vue";
 import type { UserFilters } from "~/types/access-control/users";
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
 
 const { getUsers } = useUsers();
 const { getRoles } = useRoles();
@@ -8,8 +9,8 @@ const { getRoles } = useRoles();
 // Fetch roles for filter dropdown
 const { data: rolesResponse } = getRoles();
 const roles = computed(() => {
-    if (!rolesResponse.value?.data) return [];
-    return rolesResponse.value.data.data;
+    const response = rolesResponse.value as any;
+    return extractListData(response, "data");
 });
 
 const searchQuery = ref("");
@@ -52,17 +53,14 @@ const { data: usersResponse, pending, error } = await useAsyncData(
     },
 );
 
-const users = computed(() => usersResponse.value?.data?.data || []);
+const users = computed(() => {
+    const response = usersResponse.value as any;
+    return extractListData(response, "data");
+});
+
 const pagination = computed(() => {
-    if (!usersResponse.value?.data) return null;
-    return {
-        current_page: usersResponse.value.data.current_page,
-        last_page: usersResponse.value.data.last_page,
-        total: usersResponse.value.data.total,
-        from: usersResponse.value.data.from,
-        to: usersResponse.value.data.to,
-        per_page: usersResponse.value.data.per_page,
-    };
+    const response = usersResponse.value as any;
+    return extractPaginationMeta(response, "data");
 });
 
 const goToPage = (page: number) => {

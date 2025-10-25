@@ -1,6 +1,22 @@
 <script setup lang="ts">
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
+
 const { deleteBrand } = useBrands();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: brandToDelete,
+    openDeleteModal: openDeleteModalComposable,
+    handleDelete
+} = useDeleteConfirmation(
+    (brand: any) => deleteBrand(brand.id),
+    "brand",
+    async () => await refresh()
+);
 
 const searchQuery = ref("");
 const activeFilter = ref<boolean | "">("");
@@ -37,7 +53,7 @@ const brands = computed(() => {
     const response = brandsResponse.value as any;
     // Handle structure: { data: [{ current_page, data: [...] }] }
     if (response?.data && Array.isArray(response.data) && response.data[0]) {
-        return response.data[0].data || [];
+        return extractListData(response.data[0]);
     }
     return [];
 });
@@ -46,15 +62,7 @@ const pagination = computed(() => {
     const response = brandsResponse.value as any;
     // Handle structure: { data: [{ current_page, data: [...] }] }
     if (response?.data && Array.isArray(response.data) && response.data[0]) {
-        const paginationData = response.data[0];
-        return {
-            current_page: paginationData.current_page || 1,
-            last_page: paginationData.last_page || 1,
-            per_page: paginationData.per_page || 15,
-            total: paginationData.total || 0,
-            from: paginationData.from || 0,
-            to: paginationData.to || 0,
-        };
+        return extractPaginationMeta(response.data[0]);
     }
     return null;
 });
@@ -63,27 +71,8 @@ const goToPage = (page: number) => {
     currentPage.value = page;
 };
 
-const confirmDelete = ref(false);
-const brandToDelete = ref<any>(null);
-
 const openDeleteModal = (brand: any) => {
-    brandToDelete.value = brand;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!brandToDelete.value) return;
-
-    try {
-        await deleteBrand(brandToDelete.value.id);
-        success("Brand deleted successfully!");
-        confirmDelete.value = false;
-        brandToDelete.value = null;
-        await refresh();
-    } catch (err: any) {
-        const errorMessage = err?.data?.message || "Failed to delete brand";
-        showError(errorMessage);
-    }
+    openDeleteModalComposable(brand);
 };
 </script>
 <template>
@@ -175,7 +164,7 @@ const handleDelete = async () => {
                                     <span class="badge badge-ghost badge-sm">{{ brand.product_count || 0 }} products</span>
                                 </td>
                                 <td>
-                                    <span class="badge badge-sm" :class="brand.is_active ? 'badge-success' : 'badge-error'">
+                                    <span class="badge badge-sm" :class="getActiveBadgeClass(brand.is_active)">
                                         {{ brand.is_active ? "Active" : "Inactive" }}
                                     </span>
                                 </td>

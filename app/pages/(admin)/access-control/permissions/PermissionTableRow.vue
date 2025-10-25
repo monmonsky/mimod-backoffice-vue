@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { IPermissionTableRow } from "~/types/access-control/permissions";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
 
 defineProps<IPermissionTableRow>();
 </script>
@@ -19,9 +20,7 @@ defineProps<IPermissionTableRow>();
             <div class="badge badge-outline badge-sm">{{ action }}</div>
         </td>
         <td>
-            <div
-                class="badge badge-sm"
-                :class="is_active ? 'badge-success' : 'badge-error'">
+            <div class="badge badge-sm" :class="getActiveBadgeClass(is_active)">
                 {{ is_active ? "Active" : "Inactive" }}
             </div>
         </td>

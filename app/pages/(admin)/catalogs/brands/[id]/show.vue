@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import { extractListData, extractNestedValue } from "~/utils/responseHelpers";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
+import { formatDate, formatPrice } from "~/utils/formatters";
 
 definePageMeta({
     layout: "admin",
@@ -19,14 +22,7 @@ const { data: brandResponse, pending, error } = await useAsyncData(`brand-${bran
 
 const brand = computed(() => {
     const response = brandResponse.value as any;
-    // Handle structure: { data: [...] } or direct data
-    if (response?.data) {
-        if (Array.isArray(response.data) && response.data[0]) {
-            return response.data[0];
-        }
-        return response.data;
-    }
-    return null;
+    return extractNestedValue(response, "data", null);
 });
 
 // Fetch products for this brand
@@ -45,27 +41,8 @@ const { data: productsResponse, pending: productsPending } = await useAsyncData(
 
 const products = computed(() => {
     const response = productsResponse.value as any;
-    return response?.data?.data || [];
+    return extractListData(response, "data");
 });
-
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("id-ID", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    }).format(date);
-};
-
-const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(price);
-};
 </script>
 <template>
     <div>
@@ -106,10 +83,9 @@ const formatPrice = (price: number) => {
                                     <h2 class="text-2xl font-bold">{{ brand.name }}</h2>
                                     <code class="text-base-content/60 text-sm">{{ brand.slug }}</code>
                                     <div class="mt-2">
-                                        <span class="badge" :class="brand.is_active ? 'badge-success' : 'badge-error'">
+                                        <span class="badge" :class="getActiveBadgeClass(brand.is_active)">
                                             {{ brand.is_active ? "Active" : "Inactive" }}
                                         </span>
-                                        
                                     </div>
                                 </div>
                             </div>
@@ -182,9 +158,9 @@ const formatPrice = (price: number) => {
                                     </div>
                                 </div>
                                 <div class="text-right">
-                                    <span :class="['badge', product.status ? 'badge-success' : 'badge-error']">
-                                            {{ product.status ? "Active" : "Inactive" }}
-                                        </span>
+                                    <span class="badge" :class="getActiveBadgeClass(product.status)">
+                                        {{ product.status ? "Active" : "Inactive" }}
+                                    </span>
                                 </div>
                             </div>
                         </div>

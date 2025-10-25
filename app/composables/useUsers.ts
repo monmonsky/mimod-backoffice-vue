@@ -1,14 +1,24 @@
 import type { UserFilters, UsersResponse, UserResponse, UserFormData } from "~/types/access-control/users";
+import type { PaginationParams } from "./usePagination";
 
 export const useUsers = () => {
-    const getUsers = (filters: UserFilters = {}) => {
+    const { buildPaginationParams } = usePagination();
+
+    const getUsers = (filters: Partial<PaginationParams> & Omit<UserFilters, 'page' | 'per_page'> = {}) => {
+        // Apply default pagination params (per_page: 20)
+        const paginationParams = buildPaginationParams(filters);
+
         const query = new URLSearchParams();
 
-        if (filters.search) query.append("search", filters.search);
+        if (paginationParams.page) query.append("page", paginationParams.page.toString());
+        if (paginationParams.per_page) query.append("per_page", paginationParams.per_page.toString());
+        if (paginationParams.search) query.append("search", paginationParams.search);
+        if (paginationParams.sort) query.append("sort", paginationParams.sort);
+        if (paginationParams.order) query.append("order", paginationParams.order);
+
+        // Custom filters
         if (filters.status) query.append("status", filters.status);
         if (filters.role_name) query.append("role_name", filters.role_name);
-        if (filters.page) query.append("page", filters.page.toString());
-        if (filters.per_page) query.append("per_page", filters.per_page.toString());
 
         const queryString = query.toString();
         const url = `/access-control/users${queryString ? `?${queryString}` : ""}`;

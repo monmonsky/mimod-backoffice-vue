@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ProductVariant } from "~/types/catalogs/products/types";
 import BulkVariantGenerator from "./BulkVariantGenerator.vue";
+import BulkEditVariants from "./BulkEditVariants.vue";
 
 interface Props {
     productId: number;
@@ -23,8 +24,9 @@ const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
 const { getMediaUrl } = useMediaUrl();
 
-// Bulk generator modal
+// Bulk modals
 const showBulkGenerator = ref(false);
+const showBulkEdit = ref(false);
 
 // Variants state
 const variants = ref<ProductVariant[]>([...props.initialVariants]);
@@ -435,6 +437,26 @@ const handleBulkGenerated = async () => {
     }
 };
 
+// Handle bulk edit updated
+const handleBulkUpdated = async () => {
+    showBulkEdit.value = false;
+
+    // Refresh variants list
+    try {
+        const response = await $fetch(`/catalog/products/${props.productId}/variants`, {
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+        });
+
+        variants.value = (response as any).data || [];
+        emit('variantsChanged', variants.value.length);
+    } catch (err: any) {
+        console.error("Failed to refresh variants:", err);
+    }
+};
+
 // Delete variant
 const deleteVariant = async (variant: ProductVariant) => {
     if (!confirm(`Are you sure you want to delete variant ${variant.sku}?`)) {
@@ -491,6 +513,14 @@ const formatPrice = (price: string | number) => {
                     <button type="button" @click="showBulkGenerator = true" class="btn btn-outline btn-primary btn-sm">
                         <span class="iconify lucide--layers size-4" />
                         Bulk Generate
+                    </button>
+                    <button
+                        type="button"
+                        @click="showBulkEdit = true"
+                        class="btn btn-outline btn-secondary btn-sm"
+                        :disabled="variants.length === 0">
+                        <span class="iconify lucide--edit size-4" />
+                        Bulk Edit
                     </button>
                     <button type="button" @click="openAddModal" class="btn btn-primary btn-sm">
                         <span class="iconify lucide--plus size-4" />
@@ -794,6 +824,20 @@ const formatPrice = (price: string | number) => {
                 />
             </div>
             <div class="modal-backdrop" @click="showBulkGenerator = false"></div>
+        </dialog>
+
+        <!-- Bulk Edit Modal -->
+        <dialog :open="showBulkEdit" class="modal">
+            <div class="modal-box max-w-6xl">
+                <h3 class="text-lg font-bold mb-4">Bulk Edit Variants</h3>
+                <BulkEditVariants
+                    :variants="variants"
+                    :product-id="props.productId"
+                    @updated="handleBulkUpdated"
+                    @close="showBulkEdit = false"
+                />
+            </div>
+            <div class="modal-backdrop" @click="showBulkEdit = false"></div>
         </dialog>
     </div>
 </template>

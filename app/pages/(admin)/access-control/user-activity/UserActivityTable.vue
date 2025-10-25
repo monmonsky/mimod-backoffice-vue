@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
+import { getUserActivityBadgeClass } from "~/utils/statusHelpers";
+
 const searchQuery = ref("");
 const dateFilter = ref("");
 const actionFilter = ref("");
@@ -35,38 +38,20 @@ const { data: activityResponse, pending, error, refresh } = await useAsyncData(
 
 const activities = computed(() => {
     const response = activityResponse.value as any;
-    return response?.data?.data || [];
+    return extractListData(response, "data");
 });
 
 const pagination = computed(() => {
     const response = activityResponse.value as any;
-    const data = response?.data;
-    const currentPage = data?.current_page || 1;
-    const perPageValue = data?.per_page || 10;
-    const total = data?.total || 0;
-    return {
-        current_page: currentPage,
-        last_page: data?.last_page || 1,
-        per_page: perPageValue,
-        total: total,
-        from: (currentPage - 1) * perPageValue + 1,
-        to: Math.min(currentPage * perPageValue, total),
-    };
+    return extractPaginationMeta(response, "data");
 });
 
 const goToPage = (page: number) => {
     currentPage.value = page;
 };
 
-const getActionBadgeClass = (action: string) => {
-    const actionLower = action.toLowerCase();
-    if (actionLower.includes("create") || actionLower.includes("add")) return "badge-success";
-    if (actionLower.includes("update") || actionLower.includes("edit")) return "badge-info";
-    if (actionLower.includes("delete") || actionLower.includes("remove")) return "badge-error";
-    if (actionLower.includes("login")) return "badge-primary";
-    if (actionLower.includes("logout")) return "badge-warning";
-    return "badge-ghost";
-};
+// Use helper function for action badge
+const getActionBadgeClass = (action: string) => getUserActivityBadgeClass(action);
 
 const formatDate = (dateString: string) => {
     const date = new Date(dateString);

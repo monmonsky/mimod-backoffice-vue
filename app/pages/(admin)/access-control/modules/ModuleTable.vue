@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import Sortable from "sortablejs";
 import type { ModuleGroup } from "~/types/access-control/modules";
+import { getActiveBadgeClass, getVisibleBadgeClass } from "~/utils/statusHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 const { updateModulesOrder } = useModules();
 const { success, error: showError } = useToast();
@@ -243,8 +245,7 @@ const saveOrder = async () => {
         await refresh();
     } catch (err: any) {
         console.error("Failed to update order:", err);
-        const errorMessage = err?.data?.message || "Failed to update module order";
-        showError(errorMessage);
+        showError(getErrorMessage(err, "Failed to update module order"));
     } finally {
         saving.value = false;
     }
@@ -360,10 +361,10 @@ const cancelChanges = () => {
                                                     </div>
                                                 </div>
                                                 <div class="flex items-center gap-2">
-                                                    <span class="badge badge-sm" :class="module.is_active ? 'badge-success' : 'badge-error'">
+                                                    <span class="badge badge-sm" :class="getActiveBadgeClass(module.is_active)">
                                                         {{ module.is_active ? "Active" : "Inactive" }}
                                                     </span>
-                                                    <span class="badge badge-sm" :class="module.is_visible ? 'badge-info' : 'badge-ghost'">
+                                                    <span class="badge badge-sm" :class="getVisibleBadgeClass(module.is_visible)">
                                                         {{ module.is_visible ? "Visible" : "Hidden" }}
                                                     </span>
                                                     <div class="inline-flex">
@@ -403,10 +404,10 @@ const cancelChanges = () => {
                                                         </div>
                                                     </div>
                                                     <div class="flex items-center gap-2">
-                                                        <span class="badge badge-xs" :class="child.is_active ? 'badge-success' : 'badge-error'">
+                                                        <span class="badge badge-xs" :class="getActiveBadgeClass(child.is_active)">
                                                             {{ child.is_active ? "Active" : "Inactive" }}
                                                         </span>
-                                                        <span class="badge badge-xs" :class="child.is_visible ? 'badge-info' : 'badge-ghost'">
+                                                        <span class="badge badge-xs" :class="getVisibleBadgeClass(child.is_visible)">
                                                             {{ child.is_visible ? "Visible" : "Hidden" }}
                                                         </span>
                                                         <div class="inline-flex">

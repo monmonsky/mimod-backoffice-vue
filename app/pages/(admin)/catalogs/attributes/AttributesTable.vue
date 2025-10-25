@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import type { ProductAttribute } from '~/types/catalogs/attributes';
+import { extractListData } from "~/utils/responseHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
+import { getActiveBadgeClass } from "~/utils/statusHelpers";
 
 const { deleteAttribute } = useAttributes();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: attributeToDelete,
+    openDeleteModal: openDeleteModalComposable,
+    handleDelete
+} = useDeleteConfirmation(
+    (attribute: ProductAttribute) => deleteAttribute(attribute.id),
+    "attribute",
+    async () => await refresh()
+);
 
 // Search and filters
 const searchQuery = ref('');
@@ -41,10 +56,7 @@ const {
 
 const attributes = computed(() => {
     const response = attributesResponse.value as any;
-    if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-    }
-    return [];
+    return extractListData(response, "data");
 });
 
 // Client-side pagination
@@ -79,27 +91,9 @@ watch([searchQuery, activeFilter, perPage], () => {
     currentPage.value = 1;
 });
 
-// Delete modal
-const confirmDelete = ref(false);
-const attributeToDelete = ref<ProductAttribute | null>(null);
-
+// Wrapper for delete modal with validation
 const openDeleteModal = (attribute: ProductAttribute) => {
-    attributeToDelete.value = attribute;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!attributeToDelete.value) return;
-
-    try {
-        await deleteAttribute(attributeToDelete.value.id);
-        success('Attribute deleted successfully!');
-        confirmDelete.value = false;
-        attributeToDelete.value = null;
-        await refresh();
-    } catch (err: any) {
-        showError(err?.data?.message || 'Failed to delete attribute');
-    }
+    openDeleteModalComposable(attribute);
 };
 
 // Helper functions
@@ -229,10 +223,7 @@ const getTypeBadgeClass = (type: string) => {
                                     <span class="badge badge-ghost badge-sm">{{ attribute.sort_order }}</span>
                                 </td>
                                 <td>
-                                    <span
-                                        class="badge badge-sm"
-                                        :class="attribute.is_active ? 'badge-success' : 'badge-error'"
-                                    >
+                                    <span class="badge badge-sm" :class="getActiveBadgeClass(attribute.is_active)">
                                         {{ attribute.is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>

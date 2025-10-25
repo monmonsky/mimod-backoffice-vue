@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import type { IUserTableRow } from "~/types/access-control/users";
+import { getUserStatusBadgeClass } from "~/utils/statusHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 const props = defineProps<IUserTableRow>();
 const emit = defineEmits<{
@@ -25,8 +27,7 @@ const handleDelete = async () => {
         dialog?.close();
     } catch (err: any) {
         console.error("Failed to delete user:", err);
-        const errorMessage = err?.data?.message || "Failed to delete user";
-        error(errorMessage);
+        error(getErrorMessage(err, "Failed to delete user"));
     } finally {
         deletingUser.value = false;
     }
@@ -57,11 +58,7 @@ const handleDelete = async () => {
             <span class="badge badge-ghost badge-sm">{{ role }}</span>
         </td>
         <td>
-            <span
-                :class="[
-                    'badge badge-sm',
-                    status === 'active' ? 'badge-success' : status === 'suspended' ? 'badge-warning' : 'badge-error',
-                ]">
+            <span :class="['badge badge-sm', getUserStatusBadgeClass(status)]">
                 {{ status }}
             </span>
         </td>

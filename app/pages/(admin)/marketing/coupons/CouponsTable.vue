@@ -1,6 +1,22 @@
 <script setup lang="ts">
+import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
+import { getCouponStatusBadgeClass } from "~/utils/statusHelpers";
+
 const { deleteCoupon } = useCoupons();
 const { success, error: showError } = useToast();
+
+// Delete confirmation composable
+const {
+    confirmDelete,
+    itemToDelete: couponToDelete,
+    openDeleteModal,
+    handleDelete
+} = useDeleteConfirmation(
+    deleteCoupon,
+    "coupon",
+    async () => await refresh()
+);
 
 // Filters
 const search = ref("");
@@ -36,7 +52,7 @@ const { data: couponsResponse, pending, refresh } = await useAsyncData(
 
 const coupons = computed(() => {
     const response = couponsResponse.value as any;
-    return response?.data?.coupons?.data || [];
+    return extractListData(response, "data.coupons");
 });
 
 const statistics = computed(() => {
@@ -46,15 +62,7 @@ const statistics = computed(() => {
 
 const pagination = computed(() => {
     const response = couponsResponse.value as any;
-    const couponsData = response?.data?.coupons;
-    return {
-        current_page: couponsData?.current_page || 1,
-        last_page: couponsData?.last_page || 1,
-        per_page: couponsData?.per_page || 20,
-        total: couponsData?.total || 0,
-        from: couponsData?.from || 0,
-        to: couponsData?.to || 0,
-    };
+    return extractPaginationMeta(response, "data.coupons");
 });
 
 // Pagination
@@ -63,10 +71,9 @@ const goToPage = (pageNum: number) => {
 };
 
 // Watch search with debounce
-watch(search, () => {
-    setTimeout(() => {
-        page.value = 1;
-    }, 500);
+const { debouncedValue: debouncedSearch } = useSearchDebounce(search);
+watch(debouncedSearch, () => {
+    page.value = 1;
 });
 
 // Watch filters - reset to page 1
@@ -74,33 +81,7 @@ watch([status, type], () => {
     page.value = 1;
 });
 
-// Delete coupon
-const confirmDelete = ref(false);
-const couponToDelete = ref<number | null>(null);
-
-const openDeleteModal = (id: number) => {
-    couponToDelete.value = id;
-    confirmDelete.value = true;
-};
-
-const handleDelete = async () => {
-    if (!couponToDelete.value) return;
-
-    try {
-        await deleteCoupon(couponToDelete.value);
-        success("Coupon deleted successfully!");
-        confirmDelete.value = false;
-        couponToDelete.value = null;
-        refresh();
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to delete coupon");
-    }
-};
-
 // Status & Type badge
-const getStatusClass = (isActive: boolean) => {
-    return isActive ? "badge-success" : "badge-ghost";
-};
 
 const getTypeClass = (type: string) => {
     const classes: Record<string, string> = {

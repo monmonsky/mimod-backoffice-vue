@@ -6,12 +6,17 @@ import type {
     OrderDeleteResponse,
     CreateOrderData,
 } from "~/types/orders";
+import type { PaginationParams } from "./usePagination";
 
 export const useOrders = () => {
     const config = useRuntimeConfig();
     const authStore = useAuthStore();
+    const { buildPaginationParams } = usePagination();
 
-    const getOrders = (params?: Record<string, any>, options?: { watch?: any[] }) => {
+    const getOrders = (params?: Partial<PaginationParams>, options?: { watch?: any[] }) => {
+        // Apply default pagination params (per_page: 20)
+        const paginationParams = buildPaginationParams(params);
+
         return useAsyncData<OrdersListResponse>(
             "orders",
             () =>
@@ -20,7 +25,7 @@ export const useOrders = () => {
                     headers: {
                         Authorization: `Bearer ${authStore.token}`,
                     },
-                    params,
+                    params: paginationParams,
                 }),
             {
                 watch: options?.watch || [],
