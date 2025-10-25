@@ -218,7 +218,7 @@ const formatDate = (dateString: string) => {
             :title="'Attribute Details'"
             :items="[
                 { label: 'Catalogs' },
-                { label: 'Attributes', url: '/catalogs/attributes' },
+                { label: 'Attributes', path: '/catalogs/attributes' },
                 { label: 'Details', active: true },
             ]"
         />

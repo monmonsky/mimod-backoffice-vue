@@ -253,7 +253,7 @@ const getTypeBadgeClass = (type: string) => {
                                         <button
                                             class="btn btn-ghost btn-sm btn-square text-error"
                                             @click="openDeleteModal(attribute)"
-                                            :disabled="attribute.values_count && attribute.values_count > 0"
+                                            :disabled="!!(attribute.values_count && attribute.values_count > 0)"
                                         >
                                             <span class="iconify lucide--trash-2 size-4" />
                                         </button>
@@ -334,7 +334,7 @@ const getTypeBadgeClass = (type: string) => {
                     </button>
                     <button
                         class="btn btn-error btn-sm"
-                        :disabled="attributeToDelete?.values_count && attributeToDelete.values_count > 0"
+                        :disabled="!!(attributeToDelete?.values_count && attributeToDelete.values_count > 0)"
                         @click="handleDelete"
                     >
                         <span class="iconify lucide--trash-2 size-4" />

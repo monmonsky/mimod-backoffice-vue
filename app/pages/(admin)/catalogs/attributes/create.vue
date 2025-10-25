@@ -60,7 +60,7 @@ const handleSubmit = async () => {
             :title="'Create Attribute'"
             :items="[
                 { label: 'Catalogs' },
-                { label: 'Attributes', url: '/catalogs/attributes' },
+                { label: 'Attributes', path: '/catalogs/attributes' },
                 { label: 'Create', active: true },
             ]"
         />

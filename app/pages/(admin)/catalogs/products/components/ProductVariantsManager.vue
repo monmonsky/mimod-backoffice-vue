@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductVariant } from "~/types/catalogs/products/types";
+import BulkVariantGenerator from "./BulkVariantGenerator.vue";
 
 interface Props {
     productId: number;
@@ -21,6 +22,9 @@ const emit = defineEmits<{
 const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
 const { getMediaUrl } = useMediaUrl();
+
+// Bulk generator modal
+const showBulkGenerator = ref(false);
 
 // Variants state
 const variants = ref<ProductVariant[]>([...props.initialVariants]);
@@ -411,6 +415,26 @@ const saveVariant = async () => {
     }
 };
 
+// Handle bulk generated variants
+const handleBulkGenerated = async () => {
+    showBulkGenerator.value = false;
+
+    // Refresh variants list
+    try {
+        const response = await $fetch(`/catalog/products/${props.productId}/variants`, {
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+        });
+
+        variants.value = (response as any).data || [];
+        emit('variantsChanged', variants.value.length);
+    } catch (err: any) {
+        console.error("Failed to refresh variants:", err);
+    }
+};
+
 // Delete variant
 const deleteVariant = async (variant: ProductVariant) => {
     if (!confirm(`Are you sure you want to delete variant ${variant.sku}?`)) {
@@ -463,10 +487,16 @@ const formatPrice = (price: string | number) => {
         <div class="card-body">
             <div class="flex items-center justify-between">
                 <h3 class="card-title">Product Variants ({{ variants.length }})</h3>
-                <button type="button" @click="openAddModal" class="btn btn-primary btn-sm">
-                    <span class="iconify lucide--plus size-4" />
-                    Add Variant
-                </button>
+                <div class="flex gap-2">
+                    <button type="button" @click="showBulkGenerator = true" class="btn btn-outline btn-primary btn-sm">
+                        <span class="iconify lucide--layers size-4" />
+                        Bulk Generate
+                    </button>
+                    <button type="button" @click="openAddModal" class="btn btn-primary btn-sm">
+                        <span class="iconify lucide--plus size-4" />
+                        Add Variant
+                    </button>
+                </div>
             </div>
 
             <!-- Variants List -->
@@ -750,6 +780,20 @@ const formatPrice = (price: string | number) => {
                 </div>
             </div>
             <div class="modal-backdrop" @click="closeModal"></div>
+        </dialog>
+
+        <!-- Bulk Generator Modal -->
+        <dialog :open="showBulkGenerator" class="modal">
+            <div class="modal-box max-w-6xl">
+                <h3 class="text-lg font-bold mb-4">Bulk Variant Generator</h3>
+                <BulkVariantGenerator
+                    :product-id="props.productId"
+                    :product-name="props.productName"
+                    @variants-generated="handleBulkGenerated"
+                    @close="showBulkGenerator = false"
+                />
+            </div>
+            <div class="modal-backdrop" @click="showBulkGenerator = false"></div>
         </dialog>
     </div>
 </template>
