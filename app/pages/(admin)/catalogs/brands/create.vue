@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 definePageMeta({
     layout: "admin",
@@ -73,11 +74,11 @@ const handleFileUpload = async (event: Event) => {
         form.value.logo = response.data.url;
         logoPreview.value = response.data.url;
         success("Image uploaded successfully!");
-    } catch (err: any) {
+    } catch (err) {
         console.error("=== UPLOAD ERROR ===");
         console.error("Error:", err);
         console.error("====================");
-        showError(err?.data?.message || "Failed to upload image");
+        showError(getErrorMessage(err, "Failed to upload image"));
     } finally {
         uploading.value = false;
     }
@@ -97,14 +98,14 @@ const handleSubmit = async () => {
 
         // Use navigateTo instead of router.push
         await navigateTo("/catalogs/brands");
-    } catch (err: any) {
+    } catch (err) {
         console.error("=== ERROR CREATE BRAND ===");
         console.error("Error:", err);
         console.error("Error Data:", err?.data);
         console.error("Error Message:", err?.data?.message);
         console.error("========================");
 
-        const errorMessage = err?.data?.message || "Failed to create brand";
+        const errorMessage = getErrorMessage(err, "Failed to create brand");
         showError(errorMessage);
         loading.value = false;
     }

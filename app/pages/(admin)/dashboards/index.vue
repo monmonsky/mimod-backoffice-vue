@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import DashboardSalesChart from './DashboardSalesChart.vue';
+import DashboardTopProducts from './DashboardTopProducts.vue';
+import DashboardRecentOrders from './DashboardRecentOrders.vue';
+
 definePageMeta({
     layout: "admin",
     middleware: "auth",
@@ -45,13 +49,9 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-primary-content/80 text-sm">Total Revenue</p>
-                            <p class="mt-2 text-3xl font-bold">{{ formatCurrency(stats.total_revenue || 0) }}</p>
+                            <p class="mt-2 text-3xl font-bold">{{ formatCurrency(stats.revenue?.total || 0) }}</p>
                             <p class="text-primary-content/70 mt-2 text-xs">
-                                <span v-if="stats.revenue_growth >= 0" class="text-success-content">
-                                    ↑ {{ stats.revenue_growth?.toFixed(1) }}%
-                                </span>
-                                <span v-else class="text-error-content">↓ {{ Math.abs(stats.revenue_growth || 0).toFixed(1) }}%</span>
-                                from last month
+                                {{ formatCurrency(stats.revenue?.this_month || 0) }} this month
                             </p>
                         </div>
                         <span class="iconify lucide--trending-up size-12 opacity-50" />
@@ -65,13 +65,9 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-secondary-content/80 text-sm">Total Orders</p>
-                            <p class="mt-2 text-3xl font-bold">{{ formatNumber(stats.total_orders || 0) }}</p>
+                            <p class="mt-2 text-3xl font-bold">{{ formatNumber(stats.orders?.total || 0) }}</p>
                             <p class="text-secondary-content/70 mt-2 text-xs">
-                                <span v-if="stats.orders_growth >= 0" class="text-success-content">
-                                    ↑ {{ stats.orders_growth?.toFixed(1) }}%
-                                </span>
-                                <span v-else class="text-error-content">↓ {{ Math.abs(stats.orders_growth || 0).toFixed(1) }}%</span>
-                                from last month
+                                {{ formatNumber(stats.orders?.this_month || 0) }} this month
                             </p>
                         </div>
                         <span class="iconify lucide--shopping-cart size-12 opacity-50" />
@@ -85,9 +81,9 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-accent-content/80 text-sm">Total Products</p>
-                            <p class="mt-2 text-3xl font-bold">{{ formatNumber(stats.total_products || 0) }}</p>
+                            <p class="mt-2 text-3xl font-bold">{{ formatNumber(stats.products?.total || 0) }}</p>
                             <p class="text-accent-content/70 mt-2 text-xs">
-                                {{ formatNumber(stats.active_products || 0) }} active products
+                                {{ formatNumber(stats.products?.active || 0) }} active products
                             </p>
                         </div>
                         <span class="iconify lucide--package size-12 opacity-50" />
@@ -101,15 +97,9 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-info-content/80 text-sm">Total Customers</p>
-                            <p class="mt-2 text-3xl font-bold">{{ formatNumber(stats.total_customers || 0) }}</p>
+                            <p class="mt-2 text-3xl font-bold">{{ formatNumber(stats.customers?.total || 0) }}</p>
                             <p class="text-info-content/70 mt-2 text-xs">
-                                <span v-if="stats.customers_growth >= 0" class="text-success-content">
-                                    ↑ {{ stats.customers_growth?.toFixed(1) }}%
-                                </span>
-                                <span v-else class="text-error-content">
-                                    ↓ {{ Math.abs(stats.customers_growth || 0).toFixed(1) }}%
-                                </span>
-                                from last month
+                                {{ formatNumber(stats.customers?.new_this_month || 0) }} new this month
                             </p>
                         </div>
                         <span class="iconify lucide--users size-12 opacity-50" />
@@ -126,7 +116,7 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-base-content/60 text-sm">Pending Orders</p>
-                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.pending_orders || 0) }}</p>
+                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.orders?.pending || 0) }}</p>
                         </div>
                         <span class="iconify lucide--clock size-8 text-warning" />
                     </div>
@@ -139,7 +129,7 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-base-content/60 text-sm">Processing</p>
-                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.processing_orders || 0) }}</p>
+                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.orders?.processing || 0) }}</p>
                         </div>
                         <span class="iconify lucide--package-check size-8 text-info" />
                     </div>
@@ -152,7 +142,7 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-base-content/60 text-sm">Completed</p>
-                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.completed_orders || 0) }}</p>
+                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.orders?.completed || 0) }}</p>
                         </div>
                         <span class="iconify lucide--check-circle size-8 text-success" />
                     </div>
@@ -165,7 +155,7 @@ const formatNumber = (value: number) => {
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-base-content/60 text-sm">Low Stock Items</p>
-                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.low_stock_products || 0) }}</p>
+                            <p class="mt-2 text-2xl font-bold">{{ formatNumber(stats.products?.low_stock || 0) }}</p>
                         </div>
                         <span class="iconify lucide--alert-triangle size-8 text-error" />
                     </div>

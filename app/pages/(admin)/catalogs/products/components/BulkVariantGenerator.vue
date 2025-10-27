@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProductAttribute, ProductAttributeValue } from '~/types/catalogs/attributes';
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 interface Props {
     productId: number;
@@ -297,8 +298,8 @@ const handleVariantImageUpload = async (event: Event, variant: any) => {
         });
 
         success(`${response.data.images.length} image(s) uploaded`);
-    } catch (err: any) {
-        showError(err.message || 'Failed to upload images');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to upload images'));
     } finally {
         variant.uploading = false;
         // Reset input
@@ -310,6 +311,86 @@ const handleVariantImageUpload = async (event: Event, variant: any) => {
 const removeVariantImage = (variant: any, index: number) => {
     variant.tempImages.splice(index, 1);
     variant.images.splice(index, 1);
+};
+
+// Get unique colors from variants
+const uniqueColors = computed(() => {
+    const colorMap = new Map();
+
+    generatedVariants.value.forEach((variant) => {
+        const colorAttr = variant.attributes.find((attr: any) => attr.attributeSlug === 'color');
+        if (colorAttr) {
+            if (!colorMap.has(colorAttr.value)) {
+                colorMap.set(colorAttr.value, {
+                    value: colorAttr.value,
+                    meta: colorAttr.meta,
+                    count: 1,
+                    uploading: false,
+                });
+            } else {
+                const existing = colorMap.get(colorAttr.value);
+                existing.count += 1;
+            }
+        }
+    });
+
+    return Array.from(colorMap.values());
+});
+
+// Handle bulk image upload by color
+const handleBulkColorImageUpload = async (event: Event, colorValue: string) => {
+    const target = event.target as HTMLInputElement;
+    const files = target.files;
+
+    if (!files || files.length === 0) return;
+
+    try {
+        // Find color in uniqueColors and set uploading
+        const colorItem = uniqueColors.value.find((c) => c.value === colorValue);
+        if (colorItem) {
+            colorItem.uploading = true;
+        }
+
+        const fileArray = Array.from(files);
+
+        // Upload to temp folder
+        const response = await uploadTempImages(
+            fileArray,
+            {
+                type: 'variant',
+                maxSizeMB: 10,
+                allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            }
+        );
+
+        // Apply images to all variants with this color
+        generatedVariants.value.forEach((variant) => {
+            const colorAttr = variant.attributes.find((attr: any) => attr.attributeSlug === 'color');
+            if (colorAttr && colorAttr.value === colorValue) {
+                // Add images to this variant
+                response.data.images.forEach((img: any) => {
+                    variant.tempImages.push({
+                        url: img.url,
+                        path: img.path,
+                        file_size: img.file_size || null,
+                    });
+                    variant.images.push(img.url);
+                });
+            }
+        });
+
+        success(`${response.data.images.length} image(s) applied to all ${colorValue} variants`);
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to upload images'));
+    } finally {
+        // Reset uploading state
+        const colorItem = uniqueColors.value.find((c) => c.value === colorValue);
+        if (colorItem) {
+            colorItem.uploading = false;
+        }
+        // Reset input
+        target.value = '';
+    }
 };
 
 // Save variants
@@ -374,7 +455,7 @@ const saveVariants = async () => {
                 });
 
                 console.log(`✅ SKU & Barcode generated for variant ${createdVariant.id}:`, (skuBarcodeResponse as any).data);
-            } catch (skuErr: any) {
+            } catch (skuErr) {
                 console.error(`⚠️ Failed to generate SKU & Barcode for variant ${createdVariant.id}:`, skuErr);
                 // Don't throw, continue with other variants
             }
@@ -420,7 +501,7 @@ const saveVariants = async () => {
                     console.log('=== MOVE IMAGES RESPONSE ===');
                     console.log('Response:', JSON.stringify(moveResponse, null, 2));
                     console.log('============================');
-                } catch (moveErr: any) {
+                } catch (moveErr) {
                     console.error('=== MOVE IMAGES ERROR ===');
                     console.error('Error:', moveErr);
                     console.error('Error Data:', moveErr?.data);
@@ -433,8 +514,8 @@ const saveVariants = async () => {
         success(`${generatedVariants.value.length} variant(s) created successfully!`);
         emit('variantsGenerated');
         handleClose();
-    } catch (err: any) {
-        showError(err?.data?.message || 'Failed to create variants');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to create variants'));
     } finally {
         loading.value = false;
     }
@@ -633,6 +714,60 @@ defineExpose({
                                 <button type="button" class="btn btn-sm join-item" @click="applyBulkUpdate('weight_gram')">
                                     Apply
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bulk Upload Images by Color -->
+            <div v-if="uniqueColors.length > 0" class="card bg-base-100 shadow">
+                <div class="card-body">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="card-title text-base">Bulk Upload Images by Color</h3>
+                            <p class="text-sm text-base-content/60 mt-1">
+                                Upload images once for all variants with the same color
+                            </p>
+                        </div>
+                        <span class="badge badge-info">{{ uniqueColors.length }} colors</span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                        <div
+                            v-for="color in uniqueColors"
+                            :key="color.value"
+                            class="flex items-center justify-between rounded-lg border border-base-300 p-3"
+                        >
+                            <div class="flex items-center gap-3">
+                                <!-- Color preview -->
+                                <div
+                                    v-if="color.meta?.hex"
+                                    class="h-10 w-10 rounded border-2 border-base-300"
+                                    :style="{ backgroundColor: color.meta.hex }"
+                                ></div>
+                                <div v-else class="h-10 w-10 rounded border-2 border-base-300 bg-base-200"></div>
+                                <div>
+                                    <div class="font-semibold">{{ color.value }}</div>
+                                    <div class="text-xs text-base-content/60">{{ color.count }} variants</div>
+                                </div>
+                            </div>
+                            <div>
+                                <input
+                                    :id="`bulk-color-${color.value}`"
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    class="hidden"
+                                    @change="handleBulkColorImageUpload($event, color.value)"
+                                />
+                                <label
+                                    :for="`bulk-color-${color.value}`"
+                                    class="btn btn-primary btn-sm cursor-pointer"
+                                    :class="{ 'loading': color.uploading }"
+                                >
+                                    <span v-if="!color.uploading" class="iconify lucide--upload size-4" />
+                                    {{ color.uploading ? 'Uploading...' : 'Upload' }}
+                                </label>
                             </div>
                         </div>
                     </div>

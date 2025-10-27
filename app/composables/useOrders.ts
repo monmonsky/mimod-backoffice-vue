@@ -13,20 +13,21 @@ export const useOrders = () => {
     const authStore = useAuthStore();
     const { buildPaginationParams } = usePagination();
 
-    const getOrders = (params?: Partial<PaginationParams>, options?: { watch?: any[] }) => {
-        // Apply default pagination params (per_page: 20)
-        const paginationParams = buildPaginationParams(params);
-
+    const getOrders = (params?: ComputedRef<Record<string, any>> | Record<string, any>, options?: { watch?: any[] }) => {
         return useAsyncData<OrdersListResponse>(
             "orders",
-            () =>
-                $fetch("/orders", {
+            () => {
+                // Get params value (handle both ComputedRef and plain object)
+                const paramsValue = isRef(params) ? params.value : params;
+
+                return $fetch("/orders", {
                     baseURL: config.public.apiBase,
                     headers: {
                         Authorization: `Bearer ${authStore.token}`,
                     },
-                    params: paginationParams,
-                }),
+                    params: paramsValue,
+                });
+            },
             {
                 watch: options?.watch || [],
             },
@@ -66,25 +67,35 @@ export const useOrders = () => {
         });
     };
 
-    const updateOrderStatus = async (id: number, status: string) => {
+    const updateOrderStatus = async (id: number, statusOrData: string | { status: string; notes?: string }) => {
+        // Handle both string and object parameters
+        const body = typeof statusOrData === 'string'
+            ? { status: statusOrData }
+            : statusOrData;
+
         return await $fetch<OrderUpdateResponse>(`/orders/${id}/status`, {
             method: "PATCH",
             baseURL: config.public.apiBase,
             headers: {
                 Authorization: `Bearer ${authStore.token}`,
             },
-            body: { status },
+            body,
         });
     };
 
-    const updatePaymentStatus = async (id: number, payment_status: string) => {
+    const updatePaymentStatus = async (id: number, paymentStatusOrData: string | { payment_status: string; notes?: string }) => {
+        // Handle both string and object parameters
+        const body = typeof paymentStatusOrData === 'string'
+            ? { payment_status: paymentStatusOrData }
+            : paymentStatusOrData;
+
         return await $fetch<OrderUpdateResponse>(`/orders/${id}/payment`, {
             method: "PATCH",
             baseURL: config.public.apiBase,
             headers: {
                 Authorization: `Bearer ${authStore.token}`,
             },
-            body: { payment_status },
+            body,
         });
     };
 

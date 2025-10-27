@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PageTitle from '~/components/PageTitle.vue';
 import type { ProductAttributeFormData } from '~/types/catalogs/attributes';
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 definePageMeta({
     layout: 'admin',
@@ -47,8 +48,8 @@ const handleSubmit = async () => {
         await createAttribute(form.value);
         success('Attribute created successfully!');
         await navigateTo('/catalogs/attributes');
-    } catch (err: any) {
-        showError(err?.data?.message || 'Failed to create attribute');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to create attribute'));
         loading.value = false;
     }
 };

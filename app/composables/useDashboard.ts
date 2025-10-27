@@ -13,7 +13,7 @@ export const useDashboard = () => {
         );
     };
 
-    const getSalesChart = (period: string = "7days") => {
+    const getSalesChart = (period: "week" | "month" | "year" = "week") => {
         return useAsyncData(
             `dashboard-sales-${period}`,
             () =>
@@ -42,14 +42,14 @@ export const useDashboard = () => {
         );
     };
 
-    const getTopProducts = (limit: number = 5) => {
-        return useAsyncData("dashboard-top-products", () =>
+    const getTopProducts = (period: "week" | "month" | "year" | "all" = "month", limit: number = 10) => {
+        return useAsyncData(`dashboard-top-products-${period}`, () =>
             $fetch("/dashboard/top-products", {
                 baseURL: config.public.apiBase,
                 headers: {
                     Authorization: `Bearer ${authStore.token}`,
                 },
-                params: { limit },
+                params: { period, limit },
             }),
         );
     };

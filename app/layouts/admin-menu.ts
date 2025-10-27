@@ -13,44 +13,76 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         url: "/dashboards",
     },
     {
-        id: "orders-label",
-        isTitle: true,
-        label: "Orders",
-    },
-    {
         id: "orders",
         icon: "lucide--shopping-cart",
-        label: "Orders",
+        label: "All Orders",
         url: "/orders",
     },
     {
-        id: "catalogs-label",
-        isTitle: true,
-        label: "Catalogs",
+        id: "orders-action-required",
+        icon: "lucide--clipboard-list",
+        label: "Action Required",
+        children: [
+            {
+                id: "orders-unpaid",
+                label: "Unpaid Orders",
+                url: "/orders/unpaid",
+            },
+            {
+                id: "orders-ready-to-ship",
+                label: "Ready to Ship",
+                url: "/orders/ready-to-ship",
+            },
+        ],
     },
     {
-        id: "products",
+        id: "orders-history",
+        icon: "lucide--history",
+        label: "Order History",
+        children: [
+            {
+                id: "orders-shipped",
+                label: "Shipped Orders",
+                url: "/orders/shipped",
+            },
+            {
+                id: "orders-completed",
+                label: "Completed Orders",
+                url: "/orders/completed",
+            },
+            {
+                id: "orders-cancelled",
+                label: "Cancelled Orders",
+                url: "/orders/cancelled",
+            },
+        ],
+    },
+    {
+        id: "catalogs",
         icon: "lucide--package",
-        label: "Products",
-        url: "/catalogs/products",
-    },
-    {
-        id: "brands",
-        icon: "lucide--tag",
-        label: "Brands",
-        url: "/catalogs/brands",
-    },
-    {
-        id: "categories",
-        icon: "lucide--folder-tree",
-        label: "Categories",
-        url: "/catalogs/categories",
-    },
-    {
-        id: "attributes",
-        icon: "lucide--sliders-horizontal",
-        label: "Attributes",
-        url: "/catalogs/attributes",
+        label: "Catalogs",
+        children: [
+            {
+                id: "products",
+                label: "Products",
+                url: "/catalogs/products",
+            },
+            {
+                id: "brands",
+                label: "Brands",
+                url: "/catalogs/brands",
+            },
+            {
+                id: "categories",
+                label: "Categories",
+                url: "/catalogs/categories",
+            },
+            {
+                id: "attributes",
+                label: "Attributes",
+                url: "/catalogs/attributes",
+            },
+        ],
     },
     {
         id: "customers-label",
@@ -103,45 +135,41 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         ],
     },
     {
-        id: "access-control-label",
-        isTitle: true,
+        id: "access-control",
+        icon: "lucide--shield-check",
         label: "Access Control",
-    },
-    {
-        id: "users",
-        icon: "lucide--user",
-        label: "Users",
-        url: "/access-control/users",
-    },
-    {
-        id: "roles",
-        icon: "lucide--shield",
-        label: "Roles",
-        url: "/access-control/roles",
-    },
-    {
-        id: "permissions",
-        icon: "lucide--lock",
-        label: "Permissions",
-        url: "/access-control/permissions",
-    },
-    {
-        id: "modules",
-        icon: "lucide--box",
-        label: "Modules",
-        url: "/access-control/modules",
-    },
-    {
-        id: "user-activity",
-        icon: "lucide--file-text",
-        label: "User activity",
-        url: "/access-control/user-activity",
-    },
-    {
-        id: "store-tokens",
-        icon: "lucide--key",
-        label: "Store Tokens",
-        url: "/access-control/store-tokens",
+        children: [
+            {
+                id: "users",
+                label: "Users",
+                url: "/access-control/users",
+            },
+            {
+                id: "roles",
+                label: "Roles",
+                url: "/access-control/roles",
+            },
+            {
+                id: "permissions",
+                label: "Permissions",
+                url: "/access-control/permissions",
+            },
+            {
+                id: "modules",
+                label: "Modules",
+                url: "/access-control/modules",
+            },
+            {
+                id: "user-activity",
+                label: "User Activity",
+                url: "/access-control/user-activity",
+            },
+            {
+                id: "store-tokens",
+                label: "Store Tokens",
+                url: "/access-control/store-tokens",
+            },
+        ],
     },
     {
         id: "setting-label",
@@ -155,15 +183,37 @@ export const adminMenuItems: ISidebarMenuItem[] = [
         url: "/settings",
     },
     {
-        id: "payments",
+        id: "payment",
         icon: "lucide--credit-card",
-        label: "Payments",
-        url: "/settings/payments",
+        label: "Payment",
+        children: [
+            {
+                id: "payment-methods",
+                label: "Payment Methods",
+                url: "/settings/payment-methods",
+            },
+            {
+                id: "payment-configs",
+                label: "Payment Configs",
+                url: "/settings/payment-configs",
+            },
+        ],
     },
     {
-        id: "shippings",
+        id: "shipping",
         icon: "lucide--truck",
-        label: "Shippings",
-        url: "/settings/shippings",
+        label: "Shipping",
+        children: [
+            {
+                id: "shipping-methods",
+                label: "Shipping Methods",
+                url: "/settings/shipping-methods",
+            },
+            {
+                id: "shipping-configs",
+                label: "Shipping Configs",
+                url: "/settings/shipping-configs",
+            },
+        ],
     },
 ];

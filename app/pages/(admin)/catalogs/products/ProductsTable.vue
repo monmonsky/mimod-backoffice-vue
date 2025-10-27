@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getStatusBadgeClass } from "~/utils/statusHelpers";
 import { getErrorMessage } from "~/utils/errorHandlers";
+import ProductsFilterDrawer from "./components/ProductsFilterDrawer.vue";
 
 const { deleteProduct } = useProducts();
 const { success, error: showError } = useToast();
@@ -25,6 +26,13 @@ const brand = ref("");
 const featured = ref("");
 const page = ref(1);
 const per_page = ref(20);
+
+// Clear filters
+const clearFilters = () => {
+    status.value = "";
+    brand.value = "";
+    featured.value = "";
+};
 
 // Build params reactively
 const params = computed(() => ({
@@ -54,16 +62,7 @@ const { data: productsResponse, pending, refresh } = await useAsyncData(
 
 const products = computed(() => {
     const response = productsResponse.value as any;
-    const productsList = response?.data?.products?.data || [];
-
-    return productsList;
-});
-
-const statistics = computed(() => {
-    const response = productsResponse.value as any;
-    const stats = response?.data?.statistics || {};
-
-    return stats;
+    return response?.data?.products?.data || [];
 });
 
 const pagination = computed(() => {
@@ -91,7 +90,7 @@ watch(debouncedSearch, () => {
 });
 
 // Watch filters - reset to page 1
-watch([status, brand, featured], () => {
+watch([status, brand, featured, per_page], () => {
     page.value = 1;
 });
 
@@ -146,59 +145,10 @@ const getDisplayUrl = (media: any) => {
 
 <template>
     <div>
-        <!-- Statistics Cards - 4 Most Important -->
-        <div class="mb-6 py-4 grid grid-cols-2 gap-4 md:grid-cols-4">
-            <div class="card bg-base-100 shadow">
-                <div class="card-body p-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-base-content/60 text-xs">Total Products</div>
-                            <div class="text-2xl font-bold">{{ statistics.total || 0 }}</div>
-                        </div>
-                        <span class="iconify lucide--package size-8 text-base-content/20" />
-                    </div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body p-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-base-content/60 text-xs">Active</div>
-                            <div class="text-2xl font-bold text-success">{{ statistics.active || 0 }}</div>
-                        </div>
-                        <span class="iconify lucide--check-circle size-8 text-success/20" />
-                    </div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body p-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-base-content/60 text-xs">Total Variants</div>
-                            <div class="text-2xl font-bold">{{ statistics.total_variants || 0 }}</div>
-                        </div>
-                        <span class="iconify lucide--layers size-8 text-base-content/20" />
-                    </div>
-                </div>
-            </div>
-            <div class="card bg-base-100 shadow">
-                <div class="card-body p-4">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <div class="text-base-content/60 text-xs">Low Stock</div>
-                            <div class="text-2xl font-bold text-error">{{ statistics.low_stock || 0 }}</div>
-                        </div>
-                        <span class="iconify lucide--alert-triangle size-8 text-error/20" />
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Table Card -->
         <div class="card bg-base-100 shadow">
             <div class="card-body p-0">
-                <!-- Filters & Actions -->
-                <div class="flex items-center justify-between px-5 pt-5 pb-4">
+                <!-- Filters (Match UserTable/OrdersTable style) -->
+                <div class="flex items-center justify-between px-5 pt-5">
                     <div class="inline-flex items-center gap-3">
                         <label class="input input-sm">
                             <span class="iconify lucide--search text-base-content/80 size-3.5" />
@@ -209,21 +159,6 @@ const getDisplayUrl = (media: any) => {
                                 placeholder="Search products..."
                                 aria-label="Search products" />
                         </label>
-                        <div class="hidden sm:block">
-                            <select v-model="status" class="select select-sm w-32">
-                                <option value="">All Status</option>
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="draft">Draft</option>
-                            </select>
-                        </div>
-                        <div class="hidden sm:block">
-                            <select v-model="featured" class="select select-sm w-36">
-                                <option value="">All Products</option>
-                                <option value="1">Featured</option>
-                                <option value="0">Not Featured</option>
-                            </select>
-                        </div>
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
@@ -231,77 +166,93 @@ const getDisplayUrl = (media: any) => {
                             aria-label="Create product link"
                             class="btn btn-primary btn-sm max-sm:btn-square">
                             <span class="iconify lucide--plus size-4" />
-                            <span class="hidden sm:inline">Add Product</span>
+                            <span class="hidden sm:inline">New Product</span>
                         </NuxtLink>
+                        <label
+                            for="products-filter-drawer"
+                            class="btn btn-ghost border-base-300 btn-sm btn-square"
+                            aria-label="More filters">
+                            <span class="iconify lucide--settings-2 size-4" />
+                        </label>
                     </div>
                 </div>
 
-                <!-- Loading -->
-                <div v-if="pending" class="flex items-center justify-center py-12">
-                    <span class="loading loading-spinner loading-lg"></span>
-                </div>
-
                 <!-- Table -->
-                <div v-else class="overflow-x-auto">
-                    <table class="table table-zebra">
+                <div class="mt-4 overflow-auto">
+                    <!-- Loading State -->
+                    <div v-if="pending" class="flex items-center justify-center py-12">
+                        <span class="loading loading-spinner loading-lg"></span>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div v-else-if="products.length === 0" class="flex flex-col items-center justify-center py-12">
+                        <span class="iconify lucide--package text-base-content/30 mb-4 size-16" />
+                        <p class="text-base-content/60">No products found</p>
+                    </div>
+
+                    <!-- Table -->
+                    <table v-else class="table">
                         <thead>
                             <tr>
-                                <th>Image</th>
                                 <th>Product</th>
                                 <th>Brand</th>
                                 <th>Categories</th>
                                 <th>Age Range</th>
                                 <th>Variants</th>
                                 <th>Status</th>
-                                <th>Featured</th>
-                                <th>Actions</th>
+                                <th class="text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr v-for="product in products" :key="product.id">
                                 <td>
-                                    <div class="avatar">
-                                        <div class="mask mask-squircle h-12 w-12">
-                                            <img
-                                                v-if="getPrimaryImage(product.images)"
-                                                :src="getDisplayUrl(getPrimaryImage(product.images))"
-                                                :alt="product.name"
-                                                class="object-cover" />
-                                            <div
-                                                v-else
-                                                class="bg-base-200 flex h-full w-full items-center justify-center">
-                                                <span class="iconify lucide--image size-6 text-base-content/40" />
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar">
+                                            <div class="mask mask-squircle h-12 w-12">
+                                                <img
+                                                    v-if="getPrimaryImage(product.images)"
+                                                    :src="getDisplayUrl(getPrimaryImage(product.images))"
+                                                    :alt="product.name"
+                                                    class="object-cover" />
+                                                <div
+                                                    v-else
+                                                    class="bg-base-200 flex h-full w-full items-center justify-center">
+                                                    <span class="iconify lucide--image size-6 text-base-content/40" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold">{{ product.name }}</div>
+                                            <div class="text-base-content/60 text-xs">{{ product.slug }}</div>
+                                            <div v-if="product.is_featured" class="badge badge-warning badge-xs mt-1">
+                                                Featured
                                             </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="flex flex-col">
-                                        <span class="font-medium">{{ product.name }}</span>
-                                        <span class="text-base-content/60 text-xs">{{ product.slug }}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge badge-sm badge-outline">{{ product.brand_name }}</span>
+                                    <span class="badge badge-sm badge-outline">
+                                        {{ product.brand_name || 'N/A' }}
+                                    </span>
                                 </td>
                                 <td>
                                     <div v-if="product.categories && product.categories.length > 0" class="flex flex-wrap gap-1">
                                         <span
-                                            v-for="category in product.categories.slice(0, 3)"
+                                            v-for="category in product.categories.slice(0, 2)"
                                             :key="category.id"
                                             class="badge badge-sm badge-ghost">
                                             {{ category.name }}
                                         </span>
                                         <span
-                                            v-if="product.categories.length > 3"
+                                            v-if="product.categories.length > 2"
                                             class="badge badge-sm badge-primary">
-                                            +{{ product.categories.length - 3 }}
+                                            +{{ product.categories.length - 2 }}
                                         </span>
                                     </div>
-                                    <span v-else class="text-base-content/40 text-xs italic">No categories</span>
+                                    <span v-else class="text-base-content/60 text-sm">-</span>
                                 </td>
-                                <td>
-                                    <span class="text-sm">{{ product.age_min }} - {{ product.age_max }} years</span>
+                                <td class="text-sm text-base-content/80">
+                                    {{ product.age_min }} - {{ product.age_max }} years
                                 </td>
                                 <td>
                                     <span class="badge badge-sm badge-info">
@@ -309,30 +260,32 @@ const getDisplayUrl = (media: any) => {
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge badge-sm" :class="getStatusBadgeClass(product.status)">
-                                        {{ capitalize(product.status) }}
+                                    <span :class="['badge badge-sm', getStatusBadgeClass(product.status)]">
+                                        {{ product.status }}
                                     </span>
                                 </td>
                                 <td>
-                                    <span v-if="product.is_featured" class="iconify lucide--star size-5 text-warning" />
-                                    <span v-else class="text-base-content/20">-</span>
-                                </td>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <NuxtLink :href="`/catalogs/products/${product.id}/show`" class="btn btn-ghost btn-xs">
+                                    <div class="flex justify-end gap-2">
+                                        <NuxtLink
+                                            :to="`/catalogs/products/${product.id}/show`"
+                                            class="btn btn-ghost btn-xs"
+                                            aria-label="View">
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
-                                        <NuxtLink :href="`/catalogs/products/${product.id}/edit`" class="btn btn-ghost btn-xs">
+                                        <NuxtLink
+                                            :to="`/catalogs/products/${product.id}/edit`"
+                                            class="btn btn-ghost btn-xs"
+                                            aria-label="Edit">
                                             <span class="iconify lucide--pencil size-4" />
                                         </NuxtLink>
-                                        <button @click="openDeleteModal(product.id)" class="btn btn-ghost btn-xs text-error">
+                                        <button
+                                            @click="openDeleteModal(product)"
+                                            class="btn btn-ghost btn-xs text-error"
+                                            aria-label="Delete">
                                             <span class="iconify lucide--trash-2 size-4" />
                                         </button>
                                     </div>
                                 </td>
-                            </tr>
-                            <tr v-if="products.length === 0">
-                                <td colspan="10" class="text-center">No products found</td>
                             </tr>
                         </tbody>
                     </table>
@@ -363,9 +316,8 @@ const getDisplayUrl = (media: any) => {
                             <span class="iconify lucide--chevron-left" />
                         </button>
                         <button
-                            v-for="pageNum in pagination.last_page"
+                            v-for="pageNum in Math.min(pagination.last_page, 5)"
                             :key="pageNum"
-                            v-show="Math.abs(pageNum - pagination.current_page) < 3 || pageNum === 1 || pageNum === pagination.last_page"
                             :class="[
                                 'btn btn-circle sm:btn-sm btn-xs',
                                 pageNum === pagination.current_page ? 'btn-primary' : 'btn-ghost',
@@ -385,19 +337,29 @@ const getDisplayUrl = (media: any) => {
             </div>
         </div>
 
-        <!-- Delete Confirmation Modal -->
-        <dialog :open="confirmDelete" class="modal">
+        <!-- Delete Confirmation Dialog -->
+        <dialog v-if="confirmDelete" class="modal modal-open">
             <div class="modal-box">
-                <h3 class="text-lg font-bold">Delete Product</h3>
-                <p class="py-4">Are you sure you want to delete this product? This action cannot be undone.</p>
+                <h3 class="text-lg font-bold">Confirm Deletion</h3>
+                <p class="py-4">
+                    Are you sure you want to delete product
+                    <strong>{{ productToDelete?.name }}</strong>? This action cannot be undone.
+                </p>
                 <div class="modal-action">
-                    <button class="btn btn-ghost" @click="confirmDelete = false">Cancel</button>
+                    <button class="btn" @click="confirmDelete = false">Cancel</button>
                     <button class="btn btn-error" @click="handleDelete">Delete</button>
                 </div>
             </div>
-            <form method="dialog" class="modal-backdrop">
-                <button @click="confirmDelete = false">close</button>
+            <form method="dialog" class="modal-backdrop" @submit.prevent="confirmDelete = false">
+                <button>close</button>
             </form>
         </dialog>
+
+        <!-- Filter Drawer Component -->
+        <ProductsFilterDrawer
+            v-model:status="status"
+            v-model:brand="brand"
+            v-model:featured="featured"
+            @clear="clearFilters" />
     </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import { getStatusBadgeClass } from "~/utils/statusHelpers";
 
 definePageMeta({
     layout: "admin",
@@ -56,20 +57,17 @@ const tags = computed(() => {
     }
 });
 
-// Status badge
-const getStatusClass = (status: string) => {
-    const classes: Record<string, string> = {
-        active: "badge-success",
-        inactive: "badge-warning",
-        draft: "badge-ghost",
-    };
-    return classes[status] || "badge-ghost";
-};
-
 // Get primary image
 const getPrimaryImage = (variant: any) => {
     const primaryImg = variant?.images?.find((img: any) => img.is_primary);
     return primaryImg?.url || variant?.images?.[0]?.url || null;
+};
+
+// Stock quantity badge helper
+const getStockBadgeClass = (quantity: number) => {
+    if (quantity > 10) return "badge badge-sm badge-success";
+    if (quantity > 0) return "badge badge-sm badge-warning";
+    return "badge badge-sm badge-error";
 };
 
 // Calculate total stock
@@ -452,11 +450,7 @@ const currentVariantImage = computed(() => {
                                             </span>
                                         </td>
                                         <td>
-                                            <span
-                                                :class="[
-                                                    'badge badge-sm',
-                                                    variant.stock_quantity > 10 ? 'badge-success' : variant.stock_quantity > 0 ? 'badge-warning' : 'badge-error'
-                                                ]">
+                                            <span :class="getStockBadgeClass(variant.stock_quantity)">
                                                 {{ variant.stock_quantity }}
                                             </span>
                                         </td>
@@ -485,7 +479,7 @@ const currentVariantImage = computed(() => {
                             <div>
                                 <label class="text-base-content/60 text-sm">Product Status</label>
                                 <div class="mt-1">
-                                    <span class="badge" :class="getStatusClass(product.status)">
+                                    <span :class="getStatusBadgeClass(product.status)">
                                         {{ capitalize(product.status) }}
                                     </span>
                                 </div>

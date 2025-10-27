@@ -267,18 +267,19 @@ const handleSubmit = async () => {
                             <div v-else class="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
                                 <div
                                     v-for="group in permissionGroups"
-                                    :key="group.module"
+                                    :key="group.module?.id || group.module?.name"
                                     class="border-base-300 rounded-lg border p-4">
                                     <!-- Module Header with Select All -->
-                                    <div class="mb-3 flex items-center gap-2">
+                                    <div class="mb-3 flex items-center gap-3">
                                         <input
-                                            :id="`select-all-module-${group.module}`"
+                                            :id="`select-all-module-${group.module?.id || group.module?.name}`"
                                             type="checkbox"
                                             class="checkbox checkbox-sm"
                                             :checked="isAllModulePermissionsChecked(group.permissions.map((p) => p.id))"
                                             @change="toggleAllModulePermissions(group.permissions.map((p) => p.id))" />
-                                        <label :for="`select-all-module-${group.module}`" class="cursor-pointer font-semibold">
-                                            {{ group.module }}
+                                        <label :for="`select-all-module-${group.module?.id || group.module?.name}`" class="flex items-center gap-2 cursor-pointer">
+                                            <span v-if="group.module?.icon" class="iconify" :class="group.module.icon" />
+                                            <span class="font-semibold">{{ group.module?.display_name || group.module?.name || 'Unknown' }}</span>
                                         </label>
                                     </div>
 
@@ -287,22 +288,16 @@ const handleSubmit = async () => {
                                         <label
                                             v-for="permission in group.permissions"
                                             :key="permission.id"
-                                            class="flex cursor-pointer items-start gap-2"
+                                            class="flex cursor-pointer items-center gap-2"
                                             :class="{ 'opacity-50': !permission.is_active }">
                                             <input
                                                 type="checkbox"
-                                                class="checkbox checkbox-xs mt-0.5"
+                                                class="checkbox checkbox-xs"
                                                 :checked="isPermissionChecked(permission.id)"
                                                 :disabled="!permission.is_active"
                                                 @change="togglePermission(permission.id)" />
-                                            <div class="flex-1 min-w-0">
-                                                <div class="text-sm">{{ permission.display_name }}</div>
-                                                <code class="text-base-content/50 text-xs">{{ permission.name }}</code>
-                                                <div v-if="permission.description" class="text-base-content/60 mt-0.5 text-xs">
-                                                    {{ permission.description }}
-                                                </div>
-                                            </div>
-                                            <div class="badge badge-xs" :class="permission.is_active ? 'badge-success' : 'badge-ghost'">
+                                            <div class="text-sm">{{ permission.display_name }}</div>
+                                            <div class="badge badge-xs ml-auto" :class="permission.is_active ? 'badge-success' : 'badge-ghost'">
                                                 {{ permission.action }}
                                             </div>
                                         </label>

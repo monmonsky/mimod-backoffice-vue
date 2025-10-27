@@ -54,10 +54,10 @@ watch(
         } else if (data?.data && Array.isArray(data.data)) {
             localModuleGroups.value = JSON.parse(JSON.stringify(data.data));
         }
-        // Reinitialize sortables after data sync
-        nextTick(() => {
+        // Reinitialize sortables after data sync with delay
+        setTimeout(() => {
             initAllSortables();
-        });
+        }, 100);
     },
     { immediate: true },
 );
@@ -109,50 +109,69 @@ const initGroupSortable = () => {
 
 // Initialize Sortable for modules within each group
 const initModuleSortable = (groupIndex: number) => {
-    nextTick(() => {
-        const modulesContainer = document.querySelector(`#modules-container-${groupIndex}`);
-        if (modulesContainer) {
-            const instance = Sortable.create(modulesContainer as HTMLElement, {
-                animation: 150,
-                handle: ".module-drag-handle",
-                ghostClass: "sortable-ghost",
-                group: "modules",
-                onEnd: (evt) => {
-                    const fromGroupIndex = parseInt(evt.from.getAttribute("data-group-index") || "0");
-                    const toGroupIndex = parseInt(evt.to.getAttribute("data-group-index") || "0");
+    const modulesContainer = document.querySelector(`#modules-container-${groupIndex}`);
+    if (!modulesContainer) {
+        console.warn(`Module container not found for group ${groupIndex}`);
+        return;
+    }
 
-                    if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {
-                        if (fromGroupIndex !== toGroupIndex) {
-                            // Module moved to different group
-                            const fromGroup = localModuleGroups.value[fromGroupIndex];
-                            const toGroup = localModuleGroups.value[toGroupIndex];
+    const instance = Sortable.create(modulesContainer as HTMLElement, {
+        animation: 150,
+        handle: ".module-drag-handle",
+        ghostClass: "sortable-ghost",
+        group: {
+            name: "modules",
+            pull: true,
+            put: true,
+        },
+        fallbackOnBody: true,
+        swapThreshold: 0.65,
+        onStart: (evt) => {
+            console.log('Drag started from group:', groupIndex);
+        },
+        onEnd: (evt) => {
+            const fromGroupIndex = parseInt(evt.from.getAttribute("data-group-index") || "0");
+            const toGroupIndex = parseInt(evt.to.getAttribute("data-group-index") || "0");
 
-                            if (fromGroup && toGroup) {
-                                const movedModule = fromGroup.modules[evt.oldIndex];
-                                if (movedModule) {
-                                    fromGroup.modules.splice(evt.oldIndex, 1);
-                                    toGroup.modules.splice(evt.newIndex, 0, movedModule);
-                                }
-                            }
-                        } else if (evt.oldIndex !== evt.newIndex) {
-                            // Module reordered within same group
-                            const group = localModuleGroups.value[fromGroupIndex];
-                            if (group) {
-                                const movedModule = group.modules[evt.oldIndex];
-                                if (movedModule) {
-                                    group.modules.splice(evt.oldIndex, 1);
-                                    group.modules.splice(evt.newIndex, 0, movedModule);
-                                }
-                            }
+            console.log('Drag ended:', { fromGroupIndex, toGroupIndex, oldIndex: evt.oldIndex, newIndex: evt.newIndex });
+
+            if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {
+                if (fromGroupIndex !== toGroupIndex) {
+                    // Module moved to different group
+                    const fromGroup = localModuleGroups.value[fromGroupIndex];
+                    const toGroup = localModuleGroups.value[toGroupIndex];
+
+                    if (fromGroup?.modules && toGroup?.modules) {
+                        // Remove from source group
+                        const [movedModule] = fromGroup.modules.splice(evt.oldIndex, 1);
+
+                        if (movedModule) {
+                            // Update the group_name
+                            movedModule.group_name = toGroup.group_name;
+
+                            // Insert into target group
+                            toGroup.modules.splice(evt.newIndex, 0, movedModule);
+
+                            console.log('Module moved:', movedModule.name, 'from', fromGroup.group_name, 'to', toGroup.group_name);
                         }
                     }
+                } else if (evt.oldIndex !== evt.newIndex) {
+                    // Module reordered within same group
+                    const group = localModuleGroups.value[fromGroupIndex];
+                    if (group?.modules) {
+                        const [movedModule] = group.modules.splice(evt.oldIndex, 1);
+                        if (movedModule) {
+                            group.modules.splice(evt.newIndex, 0, movedModule);
+                            console.log('Module reordered:', movedModule.name, 'in group', group.group_name);
+                        }
+                    }
+                }
+            }
 
-                    hasChanges.value = true;
-                },
-            });
-            sortableInstances.push(instance);
-        }
+            hasChanges.value = true;
+        },
     });
+    sortableInstances.push(instance);
 };
 
 // Initialize Sortable for children

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatPrice, formatDate } from "~/utils/formatters";
+import { getOrderStatusBadgeClass, getPaymentStatusBadgeClass } from "~/utils/statusHelpers";
 
 const props = defineProps<{
     orderId: number;
@@ -9,21 +10,19 @@ const emit = defineEmits<{
     close: [];
 }>();
 
-const { getOrderDetail } = useOrders();
+// Fetch order detail directly (same pattern as OrdersTable)
+const { data: orderResponse, pending: loading } = await useAsyncData(
+    `order-${props.orderId}`,
+    () =>
+        $fetch(`/orders/${props.orderId}`, {
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+        })
+);
 
-const { data: orderResponse, pending: loading } = await getOrderDetail(props.orderId);
 const order = computed(() => (orderResponse.value as any)?.data || {});
-
-const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-        pending: "badge-warning",
-        processing: "badge-info",
-        shipped: "badge-primary",
-        completed: "badge-success",
-        cancelled: "badge-error",
-    };
-    return colors[status] || "badge-ghost";
-};
 </script>
 
 <template>
@@ -48,12 +47,8 @@ const getStatusColor = (status: string) => {
                         <p class="text-base-content/60 mt-1 text-sm">{{ formatDate(order.created_at, 'datetime') }}</p>
                     </div>
                     <div class="flex gap-2">
-                        <span :class="['badge badge-lg', getStatusColor(order.status)]">{{ order.status }}</span>
-                        <span
-                            :class="[
-                                'badge badge-lg',
-                                order.payment_status === 'paid' ? 'badge-success' : 'badge-warning',
-                            ]">
+                        <span :class="['badge badge-lg', getOrderStatusBadgeClass(order.status)]">{{ order.status }}</span>
+                        <span :class="['badge badge-lg', getPaymentStatusBadgeClass(order.payment_status)]">
                             {{ order.payment_status }}
                         </span>
                     </div>

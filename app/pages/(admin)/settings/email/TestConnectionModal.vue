@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getErrorMessage } from "~/utils/errorHandlers";
+
 interface SmtpConfig {
     host: string;
     port: number;
@@ -65,8 +67,8 @@ const handleTest = async () => {
 
         testResult.value = response.data;
         success("Email sent successfully! Please check your inbox.");
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to send test email");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to send test email"));
         testResult.value = null;
     } finally {
         testing.value = false;

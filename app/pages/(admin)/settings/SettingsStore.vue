@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getErrorMessage } from "~/utils/errorHandlers";
+
 const { getSettings, updateSettings } = useSettings();
 const { success, error: showError } = useToast();
 
@@ -94,8 +96,8 @@ const handleSubmit = async () => {
 
         await updateSettings("store", payload);
         success("Store settings updated successfully!");
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to update settings");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to update settings"));
     } finally {
         saving.value = false;
     }

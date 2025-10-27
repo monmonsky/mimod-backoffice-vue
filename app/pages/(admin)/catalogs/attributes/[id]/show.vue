@@ -6,6 +6,8 @@ import type {
     ProductAttributeValueFormData,
     BulkAttributeValuesFormData,
 } from '~/types/catalogs/attributes';
+import { getActiveBadgeClass } from '~/utils/statusHelpers';
+import { formatDate } from '~/utils/formatters';
 
 definePageMeta({
     layout: 'admin',
@@ -199,17 +201,6 @@ const handleColorChange = (event: Event) => {
     const colorValue = (event.target as HTMLInputElement).value;
     singleValueForm.value.meta = { hex: colorValue };
 };
-
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(date);
-};
 </script>
 
 <template>
@@ -239,10 +230,7 @@ const formatDate = (dateString: string) => {
                                 <h2 class="text-2xl font-bold">{{ attribute.name }}</h2>
                                 <code class="text-base-content/60 text-sm">{{ attribute.slug }}</code>
                                 <div class="mt-2 flex items-center gap-2">
-                                    <span
-                                        class="badge"
-                                        :class="attribute.is_active ? 'badge-success' : 'badge-error'"
-                                    >
+                                    <span :class="getActiveBadgeClass(attribute.is_active)">
                                         {{ attribute.is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                     <span class="badge badge-primary capitalize">{{ attribute.type }}</span>
@@ -330,10 +318,7 @@ const formatDate = (dateString: string) => {
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <span
-                                        class="badge badge-sm"
-                                        :class="value.is_active ? 'badge-success' : 'badge-ghost'"
-                                    >
+                                    <span :class="getActiveBadgeClass(value.is_active, 'sm')">
                                         {{ value.is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                     <button
@@ -363,11 +348,11 @@ const formatDate = (dateString: string) => {
                         <div class="grid gap-4">
                             <div class="flex flex-col gap-1">
                                 <span class="text-base-content/60 text-sm">Created At</span>
-                                <span class="font-medium">{{ formatDate(attribute.created_at) }}</span>
+                                <span class="font-medium">{{ formatDate(attribute.created_at, 'datetime') }}</span>
                             </div>
                             <div class="flex flex-col gap-1">
                                 <span class="text-base-content/60 text-sm">Last Updated</span>
-                                <span class="font-medium">{{ formatDate(attribute.updated_at) }}</span>
+                                <span class="font-medium">{{ formatDate(attribute.updated_at, 'datetime') }}</span>
                             </div>
                         </div>
                     </div>

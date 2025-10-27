@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getErrorMessage } from "~/utils/errorHandlers";
+
 const emit = defineEmits<{
     close: [];
     success: [token: string];
@@ -30,8 +32,8 @@ const handleSubmit = async () => {
 
         const token = response.data.token;
         emit("success", token);
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to generate token");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to generate token"));
     } finally {
         generating.value = false;
     }

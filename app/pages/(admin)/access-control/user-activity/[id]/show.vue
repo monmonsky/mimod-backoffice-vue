@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import { getUserActivityBadgeClass } from "~/utils/statusHelpers";
+import { formatDate } from "~/utils/formatters";
 
 definePageMeta({
     layout: "admin",
@@ -24,28 +26,6 @@ const activity = computed(() => {
     const response = activityResponse.value as any;
     return response?.data || null;
 });
-
-const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("id-ID", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-    }).format(date);
-};
-
-const getActionBadgeClass = (action: string) => {
-    const actionLower = action?.toLowerCase();
-    if (actionLower?.includes("create") || actionLower?.includes("add")) return "badge-success";
-    if (actionLower?.includes("update") || actionLower?.includes("edit")) return "badge-info";
-    if (actionLower?.includes("delete") || actionLower?.includes("remove")) return "badge-error";
-    if (actionLower?.includes("login")) return "badge-primary";
-    if (actionLower?.includes("logout")) return "badge-warning";
-    return "badge-ghost";
-};
 
 const formatProperties = (properties: any) => {
     if (!properties) return null;
@@ -110,7 +90,7 @@ const formatProperties = (properties: any) => {
                         <div class="grid gap-4">
                             <div class="flex flex-col gap-1">
                                 <span class="text-base-content/60 text-sm">Action</span>
-                                <span class="badge w-fit" :class="getActionBadgeClass(activity.action)">
+                                <span :class="getUserActivityBadgeClass(activity.action)">
                                     {{ activity.action }}
                                 </span>
                             </div>
@@ -140,7 +120,7 @@ const formatProperties = (properties: any) => {
 
                                 <div class="flex flex-col gap-1">
                                     <span class="text-base-content/60 text-sm">Date & Time</span>
-                                    <span class="font-medium">{{ formatDate(activity.created_at) }}</span>
+                                    <span class="font-medium">{{ formatDate(activity.created_at, 'datetime') }}</span>
                                 </div>
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 definePageMeta({
     layout: "admin",
@@ -136,11 +137,11 @@ const handleFileUpload = async (event: Event) => {
         form.value.image = response.data.url;
         imagePreview.value = response.data.url;
         success("Image uploaded successfully!");
-    } catch (err: any) {
+    } catch (err) {
         console.error("=== UPLOAD ERROR ===");
         console.error("Error:", err);
         console.error("====================");
-        showError(err?.data?.message || "Failed to upload image");
+        showError(getErrorMessage(err, "Failed to upload image"));
     } finally {
         uploading.value = false;
     }
@@ -159,12 +160,12 @@ const handleSubmit = async () => {
         success("Category updated successfully!");
 
         await navigateTo("/catalogs/categories");
-    } catch (err: any) {
+    } catch (err) {
         console.error("=== ERROR UPDATE CATEGORY ===");
         console.error("Error:", err);
         console.error("============================");
 
-        const errorMessage = err?.data?.message || "Failed to update category";
+        const errorMessage = getErrorMessage(err, "Failed to update category");
         showError(errorMessage);
         loading.value = false;
     }

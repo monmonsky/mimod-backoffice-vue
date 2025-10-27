@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
 import ProductVariantsManager from "~/pages/(admin)/catalogs/products/components/ProductVariantsManager.vue";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 definePageMeta({
     layout: "admin",
@@ -10,6 +11,53 @@ const route = useRoute();
 const productId = parseInt(route.params.id as string);
 
 const { success, error: showError } = useToast();
+
+// Product type selection
+const selectedProductType = ref<'single' | 'multiple' | null>(null);
+const creatingDefaultVariant = ref(false);
+
+// Handle product type selection
+const handleSelectProductType = async (type: 'single' | 'multiple') => {
+    selectedProductType.value = type;
+
+    if (type === 'single') {
+        // Auto-create default variant for single product
+        try {
+            creatingDefaultVariant.value = true;
+
+            const defaultVariantPayload = {
+                product_id: productId,
+                size: 'One Size',
+                color: 'Default',
+                price: 0,
+                stock_quantity: 0,
+                weight_gram: 200,
+            };
+
+            await $fetch('/catalog/products/variants', {
+                method: 'POST',
+                baseURL: useRuntimeConfig().public.apiBase,
+                headers: {
+                    Authorization: `Bearer ${useAuthStore().token}`,
+                },
+                body: defaultVariantPayload,
+            });
+
+            success('Default variant created! Redirecting to edit page...');
+
+            // Wait a bit then redirect to edit page with force reload
+            setTimeout(() => {
+                // Use window.location for hard reload to ensure fresh data
+                window.location.href = `/catalogs/products/${productId}/edit`;
+            }, 1500);
+
+        } catch (variantErr) {
+            showError(getErrorMessage(variantErr, 'Failed to create default variant. Please try manually.'));
+            creatingDefaultVariant.value = false;
+            selectedProductType.value = null;
+        }
+    }
+};
 
 // Fetch product details
 const { data: productResponse, pending: loadingProduct } = await useAsyncData(`product-${productId}`, () =>
@@ -62,8 +110,8 @@ const handleFinish = async () => {
 
         success("Product setup completed and activated successfully!");
         await navigateTo("/catalogs/products");
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to activate product");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to activate product"));
     }
 };
 
@@ -143,8 +191,64 @@ const handleSkip = async () => {
                 </div>
             </div>
 
+            <!-- Product Type Selection -->
+            <div v-if="!selectedProductType && variantsCount === 0" class="card bg-base-100 mb-6 shadow">
+                <div class="card-body">
+                    <h3 class="card-title">Choose Product Type</h3>
+                    <p class="text-base-content/60 text-sm mb-4">
+                        Select how you want to manage variants for this product
+                    </p>
+
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <!-- Single Product Option -->
+                        <button
+                            class="flex items-start gap-4 rounded-lg border-2 border-base-300 p-6 text-left transition-all hover:border-primary hover:bg-primary/5"
+                            @click="handleSelectProductType('single')"
+                        >
+                            <span class="iconify lucide--package size-8 text-primary flex-shrink-0" />
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-lg mb-2">Single Product</h4>
+                                <p class="text-base-content/60 text-sm mb-3">
+                                    Best for products without size/color variations. One SKU, quick setup.
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="badge badge-sm badge-ghost">No variants</span>
+                                    <span class="badge badge-sm badge-ghost">Auto-created</span>
+                                    <span class="badge badge-sm badge-success">Recommended for simple items</span>
+                                </div>
+                            </div>
+                        </button>
+
+                        <!-- Multiple Variants Option -->
+                        <button
+                            class="flex items-start gap-4 rounded-lg border-2 border-base-300 p-6 text-left transition-all hover:border-primary hover:bg-primary/5"
+                            @click="handleSelectProductType('multiple')"
+                        >
+                            <span class="iconify lucide--boxes size-8 text-secondary flex-shrink-0" />
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-lg mb-2">Product with Variants</h4>
+                                <p class="text-base-content/60 text-sm mb-3">
+                                    For products with multiple sizes, colors, or other variations. Full control over each variant.
+                                </p>
+                                <div class="flex flex-wrap gap-2">
+                                    <span class="badge badge-sm badge-ghost">Multiple variants</span>
+                                    <span class="badge badge-sm badge-ghost">Bulk generate</span>
+                                    <span class="badge badge-sm badge-info">For clothing, shoes, etc</span>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Loading State for Single Product -->
+                    <div v-if="creatingDefaultVariant" class="mt-4 flex items-center justify-center gap-3 rounded-lg bg-primary/10 py-4">
+                        <span class="loading loading-spinner loading-md text-primary"></span>
+                        <span class="text-primary font-medium">Creating default variant...</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Product Info Summary -->
-            <div class="card bg-base-100 mb-6 shadow">
+            <div v-if="selectedProductType === 'multiple' || variantsCount > 0" class="card bg-base-100 mb-6 shadow">
                 <div class="card-body">
                     <h3 class="card-title text-base">Product Information</h3>
                     <div class="grid grid-cols-2 gap-4 mt-2 md:grid-cols-4">
@@ -170,7 +274,7 @@ const handleSkip = async () => {
 
             <!-- Variants Manager -->
             <ProductVariantsManager
-                v-if="product"
+                v-if="product && selectedProductType === 'multiple'"
                 :product-id="productId"
                 :product-name="product.name"
                 :initial-variants="product.variants || []"

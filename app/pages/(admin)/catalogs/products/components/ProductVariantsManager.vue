@@ -2,6 +2,7 @@
 import type { ProductVariant } from "~/types/catalogs/products/types";
 import BulkVariantGenerator from "./BulkVariantGenerator.vue";
 import BulkEditVariants from "./BulkEditVariants.vue";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 interface Props {
     productId: number;
@@ -23,6 +24,48 @@ const emit = defineEmits<{
 const { success, error: showError } = useToast();
 const { uploadTempImages, moveImages } = useImageUpload();
 const { getMediaUrl } = useMediaUrl();
+
+// Fetch attributes (size and color options)
+const { data: attributesResponse } = await useAsyncData(
+    'product-attributes',
+    () => $fetch('/catalog/attributes', {
+        baseURL: useRuntimeConfig().public.apiBase,
+        headers: {
+            Authorization: `Bearer ${useAuthStore().token}`,
+        },
+        params: {
+            page: 1,
+            per_page: 20,
+            with_values: true,
+            active_only: true,
+        },
+    })
+);
+
+const attributes = computed(() => {
+    const response = attributesResponse.value as any;
+    return response?.data || [];
+});
+
+// Extract size and color options
+const sizeOptions = computed(() => {
+    const sizeAttr = attributes.value.find((attr: any) => attr.slug === 'size');
+    return sizeAttr?.values?.filter((v: any) => v.is_active).map((v: any) => ({
+        id: v.id,
+        value: v.value,
+        slug: v.slug,
+    })) || [];
+});
+
+const colorOptions = computed(() => {
+    const colorAttr = attributes.value.find((attr: any) => attr.slug === 'color');
+    return colorAttr?.values?.filter((v: any) => v.is_active).map((v: any) => ({
+        id: v.id,
+        value: v.value,
+        slug: v.slug,
+        meta: v.meta ? (typeof v.meta === 'string' ? JSON.parse(v.meta) : v.meta) : null,
+    })) || [];
+});
 
 // Bulk modals
 const showBulkGenerator = ref(false);
@@ -155,8 +198,8 @@ const generateSkuBarcode = async () => {
         form.value.barcode = response.data.barcode;
 
         success(`SKU & Barcode generated! Format: ${response.data.sku_format}, ${response.data.barcode_type}`);
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to generate SKU & Barcode");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to generate SKU & Barcode"));
     } finally {
         generating.value = false;
     }
@@ -197,8 +240,8 @@ const handleImageUpload = async (event: Event) => {
             });
             success(`${response.data.count} image(s) uploaded successfully!`);
         }
-    } catch (err: any) {
-        showError(err.message || "Failed to upload images");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to upload images"));
     } finally {
         uploading.value = false;
     }
@@ -288,7 +331,7 @@ const saveVariant = async () => {
                         variants.value[index] = freshVariant;
                         console.log("✓ Variant data refreshed with new images");
                     }
-                } catch (moveErr: any) {
+                } catch (moveErr) {
                     console.error("❌ Failed to move updated variant images:", moveErr);
                     showError("Images uploaded but failed to save. Please try again.");
                     return; // Exit early on error
@@ -392,7 +435,7 @@ const saveVariant = async () => {
                     });
 
                     console.log("✓ Variant images moved successfully");
-                } catch (moveErr: any) {
+                } catch (moveErr) {
                     console.error("❌ Failed to move variant images:", moveErr);
                     // Don't fail the whole operation, just log the error
                 }
@@ -412,8 +455,8 @@ const saveVariant = async () => {
         }
 
         closeModal();
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to save variant");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to save variant"));
     }
 };
 
@@ -483,8 +526,8 @@ const deleteVariant = async (variant: ProductVariant) => {
         emit('variantsChanged', variants.value.length);
 
         success("Variant deleted successfully!");
-    } catch (err: any) {
-        showError(err?.data?.message || "Failed to delete variant");
+    } catch (err) {
+        showError(getErrorMessage(err, "Failed to delete variant"));
     }
 };
 
@@ -668,40 +711,56 @@ const formatPrice = (price: string | number) => {
                     <!-- Size & Color -->
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
-                            <label class="fieldset-label">
+                            <label class="fieldset-label" for="size">
                                 Size <span class="text-error">*</span>
                             </label>
-                            <!-- Debug: Show current form.size value -->
-                            <div v-if="editingVariant" class="text-xs text-base-content/60 mb-2">
-                                Current: <code class="bg-base-200 px-1 rounded">{{ form.size }}</code>
-                                (Type: {{ typeof form.size }})
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <label
-                                    v-for="sizeOption in ['5-6', '7-8', '9-10', '11-12']"
-                                    :key="sizeOption"
-                                    class="flex items-center gap-2 cursor-pointer hover:bg-base-200 p-2 rounded-lg border border-base-300"
-                                    :class="{ 'bg-primary/10 border-primary': form.size === sizeOption }">
-                                    <input
-                                        type="radio"
-                                        name="size"
-                                        :value="sizeOption"
-                                        v-model="form.size"
-                                        class="radio radio-primary radio-sm" />
-                                    <span class="text-sm">{{ sizeOption }}</span>
-                                </label>
-                            </div>
+                            <select
+                                id="size"
+                                v-model="form.size"
+                                class="select select-sm w-full"
+                                required
+                            >
+                                <option value="" disabled>Select size</option>
+                                <option
+                                    v-for="sizeOpt in sizeOptions"
+                                    :key="sizeOpt.id"
+                                    :value="sizeOpt.value"
+                                >
+                                    {{ sizeOpt.value }}
+                                </option>
+                            </select>
                         </div>
                         <div class="space-y-2">
                             <label class="fieldset-label" for="color">
                                 Color <span class="text-error">*</span>
                             </label>
-                            <input
+                            <select
                                 id="color"
                                 v-model="form.color"
-                                type="text"
-                                class="input input-sm w-full"
-                                placeholder="e.g., Cream, Light Blue" />
+                                class="select select-sm w-full"
+                                required
+                            >
+                                <option value="" disabled>Select color</option>
+                                <option
+                                    v-for="colorOpt in colorOptions"
+                                    :key="colorOpt.id"
+                                    :value="colorOpt.value"
+                                >
+                                    {{ colorOpt.value }}
+                                    <span v-if="colorOpt.meta?.hex"> ({{ colorOpt.meta.hex }})</span>
+                                </option>
+                            </select>
+                            <!-- Color preview if hex available -->
+                            <div v-if="form.color" class="flex items-center gap-2 mt-2">
+                                <div
+                                    v-if="colorOptions.find(c => c.value === form.color)?.meta?.hex"
+                                    class="h-6 w-6 rounded border-2 border-base-300"
+                                    :style="{ backgroundColor: colorOptions.find(c => c.value === form.color)?.meta?.hex }"
+                                ></div>
+                                <span class="text-xs text-base-content/60">
+                                    {{ colorOptions.find(c => c.value === form.color)?.meta?.hex || 'No color code' }}
+                                </span>
+                            </div>
                         </div>
                     </div>
 

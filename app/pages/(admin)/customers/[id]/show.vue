@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
 import CustomerOrderHistory from "./CustomerOrderHistory.vue";
+import { getStatusBadgeClass, getCustomerSegmentBadgeClass } from "~/utils/statusHelpers";
 
 definePageMeta({
     layout: "admin",
@@ -26,26 +27,6 @@ const preferences = computed(() => {
         return {};
     }
 });
-
-// Status badge
-const getStatusClass = (status: string) => {
-    const classes: Record<string, string> = {
-        active: "badge-success",
-        inactive: "badge-warning",
-        suspended: "badge-error",
-    };
-    return classes[status] || "badge-ghost";
-};
-
-// Segment badge
-const getSegmentClass = (segment: string) => {
-    const classes: Record<string, string> = {
-        premium: "badge-primary",
-        standard: "badge-info",
-        basic: "badge-ghost",
-    };
-    return classes[segment] || "badge-ghost";
-};
 </script>
 
 <template>
@@ -109,7 +90,7 @@ const getSegmentClass = (segment: string) => {
                             <div>
                                 <label class="text-base-content/60 text-sm">Segment</label>
                                 <div class="mt-1">
-                                    <span class="badge" :class="getSegmentClass(customer.segment)">
+                                    <span :class="getCustomerSegmentBadgeClass(customer.segment)">
                                         {{ capitalize(customer.segment) }}
                                     </span>
                                 </div>
@@ -131,7 +112,7 @@ const getSegmentClass = (segment: string) => {
                             <div>
                                 <label class="text-base-content/60 text-sm">Account Status</label>
                                 <div class="mt-1">
-                                    <span class="badge" :class="getStatusClass(customer.status)">
+                                    <span :class="getStatusBadgeClass(customer.status)">
                                         {{ capitalize(customer.status) }}
                                     </span>
                                 </div>

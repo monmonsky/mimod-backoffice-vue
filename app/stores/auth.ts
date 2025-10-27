@@ -1,5 +1,23 @@
 import { defineStore } from "pinia";
 
+interface Module {
+    id: number;
+    name: string;
+    display_name: string;
+    route: string | null;
+    icon: string | null;
+    group_name: string | null;
+    is_visible: boolean;
+    is_active: boolean;
+}
+
+interface Role {
+    id: number;
+    name: string;
+    display_name: string;
+    modules?: Module[];
+}
+
 interface User {
     id: number;
     name: string;
@@ -10,6 +28,7 @@ interface User {
     two_factor_enabled: boolean;
     role_name?: string;
     role_display_name?: string;
+    role?: Role;
 }
 
 export const useAuthStore = defineStore("auth", () => {

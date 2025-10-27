@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PageTitle from '~/components/PageTitle.vue';
 import type { ProductAttributeFormData } from '~/types/catalogs/attributes';
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 definePageMeta({
     layout: 'admin',
@@ -102,8 +103,8 @@ const handleSubmit = async () => {
         await updateAttribute(attributeId, form.value);
         success('Attribute updated successfully!');
         await navigateTo('/catalogs/attributes');
-    } catch (err: any) {
-        showError(err?.data?.message || 'Failed to update attribute');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to update attribute'));
         loading.value = false;
     }
 };

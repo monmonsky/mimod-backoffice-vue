@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import PageTitle from "~/components/PageTitle.vue";
+import ProductBasicInfoCard from "../components/ProductBasicInfoCard.vue";
+import ProductSidebarSettings from "../components/ProductSidebarSettings.vue";
+import ProductMediaCard from "../components/ProductMediaCard.vue";
+import ProductSeoCard from "../components/ProductSeoCard.vue";
+import { getErrorMessage } from "~/utils/errorHandlers";
 
 definePageMeta({
     layout: "admin",
@@ -39,7 +44,6 @@ const tempMedia = ref<Array<{
 }>>([]);
 const sessionId = ref<string>("");
 
-const tagInput = ref("");
 const loading = ref(false);
 const uploading = ref(false);
 const generatingSeo = ref(false);
@@ -60,8 +64,11 @@ const { data: categoriesResponse } = getCategories({ per_page: 100 });
 
 const categories = computed(() => {
     const response = categoriesResponse.value as any;
-    // Structure: { status, statusCode, message, data: { categories: { data: [...] }, statistics: {...} } }
-    return response?.data?.categories?.data || [];
+    // Response format: { data: [{ data: [...categories] }] }
+    if (response && Array.isArray(response.data) && response.data.length > 0) {
+        return response.data[0]?.data || [];
+    }
+    return [];
 });
 
 const selectedCategories = ref<number[]>([]);
@@ -73,27 +80,6 @@ watch(
         form.value.slug = generateSlug(newName);
     },
 );
-
-// Add tag
-const addTag = () => {
-    if (tagInput.value.trim() && !form.value.tags.includes(tagInput.value.trim())) {
-        form.value.tags.push(tagInput.value.trim());
-        tagInput.value = "";
-    }
-};
-
-// Remove tag
-const removeTag = (index: number) => {
-    form.value.tags.splice(index, 1);
-};
-
-// Handle tag input keydown
-const handleTagKeydown = (event: KeyboardEvent) => {
-    if (event.key === "Enter") {
-        event.preventDefault();
-        addTag();
-    }
-};
 
 // Handle file upload to temp (images + video)
 const handleFileUpload = async (event: Event) => {
@@ -151,8 +137,8 @@ const handleFileUpload = async (event: Event) => {
         }
 
         success(message);
-    } catch (err: any) {
-        showError(err.message || 'Failed to upload media');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to upload media'));
     } finally {
         uploading.value = false;
     }
@@ -207,8 +193,8 @@ const handleGenerateSeo = async () => {
             form.value.seo_meta.keywords = response.data.keywords;
             success('SEO metadata generated successfully');
         }
-    } catch (err: any) {
-        showError(err?.data?.message || 'Failed to generate SEO metadata');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to generate SEO metadata'));
     } finally {
         generatingSeo.value = false;
     }
@@ -300,11 +286,9 @@ const handleSubmit = async () => {
 
         // Redirect to Step 2: Add Variants (SPA navigation without reload)
         const redirectUrl = `/catalogs/products/create/${productId}/variants`;
-
-        // Don't reset loading here, let the navigation complete
         await navigateTo(redirectUrl);
-    } catch (err: any) {
-        showError(err?.data?.message || 'Failed to create product');
+    } catch (err) {
+        showError(getErrorMessage(err, 'Failed to create product'));
         loading.value = false;
     }
 };
@@ -318,344 +302,57 @@ const handleSubmit = async () => {
 
         <div class="mt-6">
             <form @submit.prevent="handleSubmit">
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <!-- Basic Information -->
-                    <div class="card bg-base-100 shadow">
-                        <div class="card-body">
-                            <div class="card-title">Basic Information</div>
-                            <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="name">
-                                        Product Name <span class="text-error">*</span>
-                                    </label>
-                                    <input
-                                        id="name"
-                                        v-model="form.name"
-                                        type="text"
-                                        class="input w-full"
-                                        placeholder="Product Name"
-                                        required />
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="slug">Slug</label>
-                                    <input
-                                        id="slug"
-                                        v-model="form.slug"
-                                        type="text"
-                                        class="input w-full bg-base-200"
-                                        placeholder="Auto-generated from name"
-                                        readonly />
-                                    <p class="text-base-content/60 text-xs">Auto-generated from product name</p>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="description"> Description </label>
-                                    <textarea
-                                        id="description"
-                                        v-model="form.description"
-                                        placeholder="Product description"
-                                        class="textarea w-full"
-                                        rows="4"></textarea>
-                                </div>
-                            </fieldset>
+                <!-- 70/30 Layout -->
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
+                    <!-- LEFT COLUMN (70%) -->
+                    <div class="space-y-6">
+                        <!-- Basic Information -->
+                        <ProductBasicInfoCard
+                            v-model:name="form.name"
+                            v-model:slug="form.slug"
+                            v-model:description="form.description"
+                        />
+
+                        <!-- Product Media (Images & Video) -->
+                        <ProductMediaCard
+                            :existing-images="[]"
+                            :temp-media="tempMedia"
+                            :uploading="uploading"
+                            :total-images="form.images.length"
+                            @upload="handleFileUpload"
+                            @remove="removeMedia"
+                        />
+
+                        <!-- SEO Meta -->
+                        <ProductSeoCard
+                            v-model:title="form.seo_meta.title"
+                            v-model:description="form.seo_meta.description"
+                            v-model:keywords="form.seo_meta.keywords"
+                            :generating-seo="generatingSeo"
+                            :can-generate="!!form.name && !!form.description"
+                            @generate="handleGenerateSeo"
+                        />
+
+                        <!-- Draft Notice -->
+                        <div class="alert alert-info">
+                            <span class="iconify lucide--info size-5"></span>
+                            <span class="text-sm">Product will be created as <strong>Draft</strong>. After adding variants, it will be automatically set to <strong>Active</strong>.</span>
                         </div>
                     </div>
 
-                    <!-- Brand & Categories -->
-                    <div class="card bg-base-100 shadow">
-                        <div class="card-body">
-                            <div class="card-title">Brand & Categories</div>
-                            <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="brand">
-                                        Brand <span class="text-error">*</span>
-                                    </label>
-                                    <select id="brand" v-model="form.brand_id" class="select w-full" required>
-                                        <option value="" disabled>Select brand</option>
-                                        <option v-for="brand in brands" :key="brand.id" :value="brand.id">
-                                            {{ brand.name }}
-                                        </option>
-                                    </select>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fieldset-label">
-                                        Categories <span class="text-error">*</span>
-                                    </label>
-                                    <div class="space-y-2 max-h-48 overflow-y-auto p-2 border border-base-300 rounded-lg">
-                                        <label
-                                            v-for="category in categories"
-                                            :key="category.id"
-                                            class="flex cursor-pointer items-center gap-2 hover:bg-base-200 p-2 rounded">
-                                            <input
-                                                v-model="selectedCategories"
-                                                type="checkbox"
-                                                :value="category.id"
-                                                class="checkbox checkbox-sm checkbox-primary" />
-                                            <span class="label-text">{{ category.name }}</span>
-                                        </label>
-                                    </div>
-                                    <p v-if="selectedCategories.length > 0" class="text-primary text-xs">
-                                        {{ selectedCategories.length }} {{ selectedCategories.length === 1 ? 'category' : 'categories' }} selected
-                                    </p>
-                                </div>
-                            </fieldset>
-                        </div>
-                    </div>
-
-                    <!-- Age Range -->
-                    <div class="card bg-base-100 shadow">
-                        <div class="card-body">
-                            <div class="card-title">Age Range</div>
-                            <fieldset class="fieldset mt-2 grid grid-cols-2 gap-4">
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="age_min"> Minimum Age </label>
-                                    <label class="input w-full">
-                                        <input
-                                            id="age_min"
-                                            v-model.number="form.age_min"
-                                            class="grow"
-                                            placeholder="0"
-                                            type="number"
-                                            min="0"
-                                            required />
-                                        <span class="text-base-content/60">years</span>
-                                    </label>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="age_max"> Maximum Age </label>
-                                    <label class="input w-full">
-                                        <input
-                                            id="age_max"
-                                            v-model.number="form.age_max"
-                                            class="grow"
-                                            placeholder="0"
-                                            type="number"
-                                            min="0"
-                                            required />
-                                        <span class="text-base-content/60">years</span>
-                                    </label>
-                                </div>
-                            </fieldset>
-                        </div>
-                    </div>
-
-                    <!-- Tags -->
-                    <div class="card bg-base-100 shadow">
-                        <div class="card-body">
-                            <div class="card-title">Tags</div>
-                            <fieldset class="fieldset mt-2 gap-4">
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="tag-input"> Add Tags </label>
-                                    <div class="flex gap-2">
-                                        <input
-                                            id="tag-input"
-                                            v-model="tagInput"
-                                            type="text"
-                                            placeholder="Enter tag and press Enter"
-                                            class="input input-sm flex-1"
-                                            @keydown="handleTagKeydown" />
-                                        <button type="button" @click="addTag" class="btn btn-primary btn-sm">
-                                            <span class="iconify lucide--plus size-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div v-if="form.tags.length > 0" class="flex flex-wrap gap-2 mt-2">
-                                    <span
-                                        v-for="(tag, index) in form.tags"
-                                        :key="index"
-                                        class="badge badge-primary gap-2 py-3">
-                                        {{ tag }}
-                                        <button
-                                            type="button"
-                                            @click="removeTag(index)"
-                                            class="btn btn-circle btn-ghost btn-xs">
-                                            <span class="iconify lucide--x size-3" />
-                                        </button>
-                                    </span>
-                                </div>
-                            </fieldset>
-                        </div>
-                    </div>
-
-                    <!-- Product Media (Images + Video) -->
-                    <div class="card bg-base-100 shadow md:col-span-2">
-                        <div class="card-body">
-                            <div class="card-title">
-                                <span class="iconify lucide--images size-5" />
-                                Product Media
-                            </div>
-                            <div class="mt-2">
-                                <!-- Preview media -->
-                                <div v-if="tempMedia.length > 0" class="mb-4">
-                                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                                        <div
-                                            v-for="(media, index) in tempMedia"
-                                            :key="index"
-                                            class="group relative aspect-square overflow-hidden rounded-lg border-2"
-                                            :class="media.media_type === 'video' ? 'border-primary' : 'border-base-300'">
-                                            <!-- Image Preview -->
-                                            <img v-if="media.media_type === 'image'" :src="media.url" :alt="`Product image ${index + 1}`" class="h-full w-full object-cover" />
-
-                                            <!-- Video Preview with Thumbnail -->
-                                            <div v-else class="relative h-full w-full">
-                                                <img
-                                                    v-if="media.thumbnail_url"
-                                                    :src="media.thumbnail_url"
-                                                    :alt="`Video thumbnail ${index + 1}`"
-                                                    class="h-full w-full object-cover" />
-                                                <div v-else class="h-full w-full bg-base-300 flex items-center justify-center">
-                                                    <span class="iconify lucide--video size-12 text-base-content/40" />
-                                                </div>
-                                                <!-- Play Icon Overlay -->
-                                                <div class="absolute inset-0 flex items-center justify-center bg-black/30">
-                                                    <div class="bg-primary rounded-full p-3">
-                                                        <span class="iconify lucide--play size-6 text-white" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Media Type Badge -->
-                                            <div v-if="media.media_type === 'video'" class="absolute top-2 left-2 badge badge-primary badge-sm gap-1 z-10">
-                                                <span class="iconify lucide--video size-3" />
-                                                Video
-                                            </div>
-
-                                            <!-- Video Duration -->
-                                            <div v-if="media.media_type === 'video' && media.duration" class="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs z-10">
-                                                {{ Math.floor(media.duration / 60) }}:{{ String(media.duration % 60).padStart(2, '0') }}
-                                            </div>
-                                            <!-- Remove Button -->
-                                            <button
-                                                type="button"
-                                                @click="removeMedia(index)"
-                                                class="btn btn-circle btn-error btn-xs absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <span class="iconify lucide--x size-3" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Upload Area -->
-                                <div class="space-y-3">
-                                    <div class="border-2 border-dashed border-base-300 rounded-lg p-6 text-center hover:border-primary transition-colors">
-                                        <span class="iconify lucide--upload-cloud text-base-content/40 mb-2 size-10 block mx-auto" />
-                                        <p class="text-base-content/60 mb-3 text-sm">
-                                            {{ tempMedia.length > 0 ? 'Add more media' : 'Upload images or videos' }}
-                                        </p>
-                                        <label class="btn btn-primary btn-sm">
-                                            <span v-if="uploading" class="loading loading-spinner loading-xs"></span>
-                                            <span v-else class="iconify lucide--upload size-4" />
-                                            {{ uploading ? 'Uploading...' : 'Upload Media' }}
-                                            <input type="file" accept="image/*,video/*" multiple class="hidden" @change="handleFileUpload" :disabled="uploading" />
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="alert alert-info mt-3">
-                                    <span class="iconify lucide--info size-4" />
-                                    <div class="text-xs">
-                                        <p>Supported image formats: JPEG, PNG, GIF, WebP. Max 10MB per file.</p>
-                                        <p>Supported video formats: MP4, MOV, AVI. Max 100MB per file.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SEO Meta -->
-                    <div class="card bg-base-100 shadow md:col-span-2">
-                        <div class="card-body">
-                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                                <div class="card-title">
-                                    <span class="iconify lucide--search size-5" />
-                                    SEO Metadata
-                                </div>
-                                <div class="flex flex-col items-end gap-1">
-                                    <button
-                                        type="button"
-                                        @click="handleGenerateSeo"
-                                        class="btn btn-primary btn-sm"
-                                        :disabled="generatingSeo || !form.name || !form.description">
-                                        <span v-if="generatingSeo" class="loading loading-spinner loading-xs"></span>
-                                        <span v-else class="iconify lucide--sparkles size-4" />
-                                        {{ generatingSeo ? 'Generating...' : 'Generate with AI' }}
-                                    </button>
-                                    <p v-if="!form.name || !form.description" class="text-xs text-warning">
-                                        Name and description required
-                                    </p>
-                                </div>
-                            </div>
-                            <fieldset class="fieldset mt-2 grid grid-cols-1 gap-4">
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="seo_title">
-                                        SEO Title
-                                    </label>
-                                    <input
-                                        id="seo_title"
-                                        v-model="form.seo_meta.title"
-                                        type="text"
-                                        class="input w-full"
-                                        placeholder="SEO Title untuk Google Search"
-                                        maxlength="60" />
-                                    <p class="text-base-content/60 text-xs">
-                                        Recommended: 50-60 characters ({{ form.seo_meta.title.length }}/60)
-                                    </p>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="seo_description">
-                                        SEO Meta Description
-                                    </label>
-                                    <textarea
-                                        id="seo_description"
-                                        v-model="form.seo_meta.description"
-                                        placeholder="Meta description untuk snippet Google Search Results"
-                                        class="textarea w-full"
-                                        rows="3"
-                                        maxlength="160"></textarea>
-                                    <p class="text-base-content/60 text-xs">
-                                        Recommended: 120-160 characters ({{ form.seo_meta.description.length }}/160)
-                                    </p>
-                                </div>
-                                <div class="space-y-2">
-                                    <label class="fieldset-label" for="seo_keywords">
-                                        SEO Keywords
-                                    </label>
-                                    <input
-                                        id="seo_keywords"
-                                        v-model="form.seo_meta.keywords"
-                                        type="text"
-                                        class="input w-full"
-                                        placeholder="keyword1, keyword2, keyword3" />
-                                    <p class="text-base-content/60 text-xs">
-                                        Separate keywords with commas
-                                    </p>
-                                </div>
-                            </fieldset>
-                        </div>
-                    </div>
-
-                    <!-- Settings -->
-                    <div class="card bg-base-100 shadow md:col-span-2">
-                        <div class="card-body">
-                            <div class="card-title">Settings</div>
-                            <fieldset class="fieldset mt-2">
-                                <!-- Status auto-set to draft, will be activated after variants added -->
-                                <div class="alert alert-info">
-                                    <span class="iconify lucide--info size-5"></span>
-                                    <span class="text-sm">Product will be created as <strong>Draft</strong>. After adding variants, it will be automatically set to <strong>Active</strong>.</span>
-                                </div>
-
-                                <div class="mt-4">
-                                    <label class="label cursor-pointer gap-3 justify-start" for="featured">
-                                        <input
-                                            id="featured"
-                                            v-model="form.is_featured"
-                                            class="toggle toggle-primary"
-                                            type="checkbox" />
-                                        <span class="label-text">Featured Product</span>
-                                    </label>
-                                </div>
-                            </fieldset>
-                        </div>
+                    <!-- RIGHT COLUMN (30%) - Sidebar -->
+                    <div class="space-y-6">
+                        <ProductSidebarSettings
+                            v-model:brand-id="form.brand_id"
+                            v-model:selected-categories="selectedCategories"
+                            v-model:age-min="form.age_min"
+                            v-model:age-max="form.age_max"
+                            v-model:tags="form.tags"
+                            v-model:status="form.status"
+                            v-model:is-featured="form.is_featured"
+                            :brands="brands"
+                            :categories="categories"
+                        />
                     </div>
                 </div>
 

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import PageTitle from "~/components/PageTitle.vue";
 import type { User } from "~/types/access-control/users";
+import { getUserStatusBadgeClass } from "~/utils/statusHelpers";
 
 const route = useRoute();
 const userId = Number(route.params.id);
@@ -76,11 +77,7 @@ definePageMeta({
                                     <div>
                                         <label class="text-base-content/60 text-sm font-medium">Status</label>
                                         <p class="mt-1">
-                                            <span
-                                                :class="[
-                                                    'badge',
-                                                    user.status === 'active' ? 'badge-success' : user.status === 'suspended' ? 'badge-warning' : 'badge-error',
-                                                ]">
+                                            <span :class="getUserStatusBadgeClass(user.status)">
                                                 {{ user.status }}
                                             </span>
                                         </p>

@@ -1,0 +1,600 @@
+<script setup lang="ts">
+import { formatPrice, formatDate } from "~/utils/formatters";
+import { getOrderStatusBadgeClass, getPaymentStatusBadgeClass } from "~/utils/statusHelpers";
+import { getErrorMessage } from "~/utils/errorHandlers";
+import UpdateStatusModal from "./components/UpdateStatusModal.vue";
+import UpdatePaymentModal from "./components/UpdatePaymentModal.vue";
+import OrdersFilterDrawer from "./components/OrdersFilterDrawer.vue";
+
+const props = defineProps<{
+    initialFilters?: {
+        payment_status?: string;
+        status?: string;
+        payment_method?: string;
+        courier?: string;
+    };
+}>();
+
+const emit = defineEmits<{
+    'update:statistics': [stats: any]
+}>();
+
+const { sendInvoiceEmail } = useOrders();
+const { success, error: showError } = useToast();
+
+// Initialize filters with props.initialFilters if provided
+const selectedStatus = ref(props.initialFilters?.status || "all");
+const selectedPaymentStatus = ref(props.initialFilters?.payment_status || "all");
+const selectedPaymentMethod = ref(props.initialFilters?.payment_method || "all");
+const selectedCourier = ref(props.initialFilters?.courier || "all");
+const searchQuery = ref("");
+const dateFrom = ref("");
+const dateTo = ref("");
+const minTotal = ref("");
+const maxTotal = ref("");
+const sortBy = ref("created_at");
+const sortOrder = ref<"asc" | "desc">("desc");
+const currentPage = ref(1);
+const perPage = ref(20);
+
+// Handle column sorting
+const handleSort = (column: string) => {
+    if (sortBy.value === column) {
+        // Toggle order if same column
+        sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
+    } else {
+        // New column - default to desc
+        sortBy.value = column;
+        sortOrder.value = "desc";
+    }
+};
+
+// Get sort icon for column
+const getSortIcon = (column: string) => {
+    if (sortBy.value !== column) return "lucide--chevrons-up-down";
+    return sortOrder.value === "asc" ? "lucide--chevron-up" : "lucide--chevron-down";
+};
+
+// Clear all filters
+const clearFilters = () => {
+    selectedStatus.value = props.initialFilters?.status || "all";
+    selectedPaymentStatus.value = props.initialFilters?.payment_status || "all";
+    selectedPaymentMethod.value = props.initialFilters?.payment_method || "all";
+    selectedCourier.value = props.initialFilters?.courier || "all";
+    searchQuery.value = "";
+    dateFrom.value = "";
+    dateTo.value = "";
+    minTotal.value = "";
+    maxTotal.value = "";
+    sortBy.value = "created_at";
+    sortOrder.value = "desc";
+};
+
+const goToPage = (pageNum: number) => {
+    currentPage.value = pageNum;
+};
+
+// Watch filters - reset to page 1 when filters change
+watch(
+    [
+        selectedStatus,
+        selectedPaymentStatus,
+        selectedPaymentMethod,
+        selectedCourier,
+        searchQuery,
+        dateFrom,
+        dateTo,
+        minTotal,
+        maxTotal,
+        sortBy,
+        sortOrder,
+        perPage,
+    ],
+    () => {
+        currentPage.value = 1;
+    }
+);
+
+const params = computed(() => {
+    const filters: Record<string, any> = {
+        page: currentPage.value,
+        per_page: perPage.value,
+        sort_by: sortBy.value,
+        sort_order: sortOrder.value,
+    };
+
+    if (selectedStatus.value !== "all") filters.status = selectedStatus.value;
+    if (selectedPaymentStatus.value !== "all") filters.payment_status = selectedPaymentStatus.value;
+    if (selectedPaymentMethod.value !== "all") filters.payment_method = selectedPaymentMethod.value;
+    if (selectedCourier.value !== "all") filters.courier = selectedCourier.value;
+    if (searchQuery.value) filters.search = searchQuery.value;
+    if (dateFrom.value) filters.date_from = dateFrom.value;
+    if (dateTo.value) filters.date_to = dateTo.value;
+    if (minTotal.value) filters.min_total = minTotal.value;
+    if (maxTotal.value) filters.max_total = maxTotal.value;
+
+    return filters;
+});
+
+// Fetch orders directly (same pattern as ProductsTable)
+const { data: ordersResponse, pending: loading, refresh } = await useAsyncData(
+    "orders",
+    () =>
+        $fetch("/orders", {
+            baseURL: useRuntimeConfig().public.apiBase,
+            headers: {
+                Authorization: `Bearer ${useAuthStore().token}`,
+            },
+            params: params.value,
+        }),
+    {
+        watch: [params],
+    }
+);
+
+const orders = computed(() => {
+    const response = ordersResponse.value as any;
+    // Same pattern as ProductsTable: response.data.orders.data
+    const ordersList = response?.data?.orders?.data || [];
+    return ordersList;
+});
+
+const statistics = computed(() => {
+    const response = ordersResponse.value as any;
+    const stats = response?.data?.statistics || {};
+    return stats;
+});
+
+const pagination = computed(() => {
+    const response = ordersResponse.value as any;
+    const ordersData = response?.data?.orders;
+    return {
+        current_page: ordersData?.current_page || 1,
+        last_page: ordersData?.last_page || 1,
+        per_page: ordersData?.per_page || 20,
+        total: ordersData?.total || 0,
+        from: ordersData?.from || 0,
+        to: ordersData?.to || 0,
+    };
+});
+
+// Emit statistics to parent component
+watch(statistics, (newStats) => {
+    emit('update:statistics', newStats);
+}, { immediate: true });
+
+const selectedOrder = ref<any>(null);
+const showStatusModal = ref(false);
+const showPaymentModal = ref(false);
+
+const handleStatusUpdated = () => {
+    refresh();
+    showStatusModal.value = false;
+};
+
+const handlePaymentUpdated = () => {
+    refresh();
+    showPaymentModal.value = false;
+};
+
+// Check if order status can be updated
+const canUpdateStatus = (order: any) => {
+    return order?.status !== "completed" && order?.status !== "cancelled";
+};
+
+// Check if payment status can be updated
+const canUpdatePayment = (order: any) => {
+    return order?.payment_status !== "paid";
+};
+
+// Get available actions for an order
+const getAvailableActions = (order: any) => {
+    const actions = [];
+
+    if (canUpdateStatus(order)) {
+        actions.push({ id: "status", label: "Update Status", icon: "lucide--package" });
+    }
+
+    if (canUpdatePayment(order)) {
+        actions.push({ id: "payment", label: "Update Payment", icon: "lucide--credit-card" });
+    }
+
+    // Send Invoice - hanya jika ada customer email
+    if (order?.customer?.email) {
+        actions.push({ id: "invoice", label: "Send Invoice", icon: "lucide--mail" });
+    }
+
+    actions.push({ id: "detail", label: "View Details", icon: "lucide--eye" });
+
+    return actions;
+};
+
+const handleSendInvoice = async (order: any) => {
+    if (!order?.customer?.email) {
+        showError("Customer email not found");
+        return;
+    }
+
+    try {
+        await sendInvoiceEmail(order.id);
+        success(`Invoice sent to ${order.customer.email}`);
+    } catch (err: any) {
+        showError(getErrorMessage(err, "Failed to send invoice email"));
+    }
+};
+
+const router = useRouter();
+
+const handleAction = (action: string, order: any) => {
+    selectedOrder.value = order;
+    if (action === "status") {
+        showStatusModal.value = true;
+    } else if (action === "payment") {
+        showPaymentModal.value = true;
+    } else if (action === "detail") {
+        router.push(`/orders/${order.id}/show`);
+    } else if (action === "invoice") {
+        handleSendInvoice(order);
+    }
+};
+</script>
+
+<template>
+    <div>
+        <!-- Orders Table -->
+        <div class="card bg-base-100 shadow">
+            <div class="card-body p-0">
+                <!-- Filters -->
+                <div class="px-5 pt-5 pb-4 space-y-4">
+                    <!-- Search & Main Filters -->
+                    <div class="flex items-center justify-between gap-3 flex-wrap">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <label class="input input-sm">
+                                <span class="iconify lucide--search text-base-content/80 size-3.5" />
+                                <input
+                                    v-model="searchQuery"
+                                    type="search"
+                                    class="w-24 sm:w-48"
+                                    placeholder="Search orders..."
+                                    aria-label="Search orders" />
+                            </label>
+                            <select v-model="selectedStatus" class="select select-sm w-32">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="processing">Processing</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                            <select v-model="selectedPaymentStatus" class="select select-sm w-36">
+                                <option value="all">All Payment</option>
+                                <option value="paid">Paid</option>
+                                <option value="unpaid">Unpaid</option>
+                            </select>
+                            <label for="orders-filter-drawer" class="btn btn-sm btn-ghost gap-2">
+                                <span class="iconify lucide--sliders-horizontal size-4" />
+                                <span class="hidden sm:inline">More Filters</span>
+                            </label>
+                        </div>
+                        <NuxtLink to="/orders/create" class="btn btn-primary btn-sm">
+                            <span class="iconify lucide--plus size-4" />
+                            Create Order
+                        </NuxtLink>
+                    </div>
+                </div>
+
+                <!-- Loading -->
+                <div v-if="loading" class="flex items-center justify-center py-12">
+                    <span class="loading loading-spinner loading-lg"></span>
+                </div>
+
+                <!-- Table -->
+                <div v-else class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <button @click="handleSort('order_number')" class="flex items-center gap-1.5 hover:text-primary transition-colors">
+                                        <span>Order Number</span>
+                                        <span :class="['iconify', getSortIcon('order_number'), 'size-4']" />
+                                    </button>
+                                </th>
+                                <th>Customer</th>
+                                <th>
+                                    <button @click="handleSort('total_amount')" class="flex items-center gap-1.5 hover:text-primary transition-colors">
+                                        <span>Total</span>
+                                        <span :class="['iconify', getSortIcon('total_amount'), 'size-4']" />
+                                    </button>
+                                </th>
+                                <th>Status</th>
+                                <th>Payment</th>
+                                <th>Payment Method</th>
+                                <th>
+                                    <button @click="handleSort('created_at')" class="flex items-center gap-1.5 hover:text-primary transition-colors">
+                                        <span>Date</span>
+                                        <span :class="['iconify', getSortIcon('created_at'), 'size-4']" />
+                                    </button>
+                                </th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="order in orders" :key="order?.id">
+                                <td>
+                                    <button @click="handleAction('detail', order)" class="link link-primary font-medium">
+                                        {{ order?.order_number || 'N/A' }}
+                                    </button>
+                                </td>
+                                <td>
+                                    <div>
+                                        <p class="font-medium">{{ order?.customer?.name || 'N/A' }}</p>
+                                        <p class="text-base-content/60 text-xs">{{ order?.customer?.email || '' }}</p>
+                                    </div>
+                                </td>
+                                <td class="font-medium">{{ formatPrice(order?.total_amount || 0) }}</td>
+                                <td>
+                                    <div class="flex items-center gap-1">
+                                        <span :class="['badge badge-sm', getOrderStatusBadgeClass(order?.status)]">
+                                            {{ order?.status || 'N/A' }}
+                                        </span>
+                                        <span
+                                            v-if="!canUpdateStatus(order)"
+                                            class="iconify lucide--lock size-3 text-base-content/40"
+                                            title="Status locked" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-1">
+                                        <span :class="['badge badge-sm', getPaymentStatusBadgeClass(order?.payment_status)]">
+                                            {{ order?.payment_status || 'N/A' }}
+                                        </span>
+                                        <span
+                                            v-if="!canUpdatePayment(order)"
+                                            class="iconify lucide--lock size-3 text-success/40"
+                                            title="Payment locked" />
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm badge-outline">
+                                        {{ order?.payment_method || 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="text-sm">{{ order?.created_at ? formatDate(order.created_at, 'datetime') : 'N/A' }}</td>
+                                <td>
+                                    <div class="flex justify-end">
+                                        <details class="dropdown dropdown-end">
+                                            <summary class="btn btn-ghost btn-sm">
+                                                <span class="iconify lucide--more-vertical size-4" />
+                                            </summary>
+                                            <ul class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow-lg border border-base-300">
+                                                <li v-for="action in getAvailableActions(order)" :key="action.id">
+                                                    <a @click="handleAction(action.id, order)">
+                                                        <span :class="['iconify', action.icon, 'size-4']" />
+                                                        {{ action.label }}
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </details>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="pagination" class="flex items-center justify-between p-6">
+                    <div class="text-base-content/80 hover:text-base-content flex gap-2 text-sm">
+                        <span class="hidden sm:inline">Per page</span>
+                        <select v-model="perPage" class="select select-xs w-18" aria-label="Per page">
+                            <option :value="10">10</option>
+                            <option :value="20">20</option>
+                            <option :value="50">50</option>
+                            <option :value="100">100</option>
+                        </select>
+                    </div>
+                    <span class="text-base-content/80 hidden text-sm lg:inline">
+                        Showing
+                        <span class="text-base-content font-medium">{{ pagination.from }} to {{ pagination.to }}</span>
+                        of {{ pagination.total }} items
+                    </span>
+                    <div class="inline-flex items-center gap-1">
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Prev"
+                            :disabled="pagination.current_page === 1"
+                            @click="goToPage(pagination.current_page - 1)">
+                            <span class="iconify lucide--chevron-left" />
+                        </button>
+                        <button
+                            v-for="pageNum in Math.min(pagination.last_page, 5)"
+                            :key="pageNum"
+                            :class="[
+                                'btn btn-circle sm:btn-sm btn-xs',
+                                pageNum === pagination.current_page ? 'btn-primary' : 'btn-ghost',
+                            ]"
+                            @click="goToPage(pageNum)">
+                            {{ pageNum }}
+                        </button>
+                        <button
+                            class="btn btn-circle sm:btn-sm btn-xs btn-ghost"
+                            aria-label="Next"
+                            :disabled="pagination.current_page === pagination.last_page"
+                            @click="goToPage(pagination.current_page + 1)">
+                            <span class="iconify lucide--chevron-right" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modals -->
+        <UpdateStatusModal
+            v-if="showStatusModal && selectedOrder"
+            :order="selectedOrder"
+            @close="showStatusModal = false"
+            @updated="handleStatusUpdated" />
+
+        <UpdatePaymentModal
+            v-if="showPaymentModal && selectedOrder"
+            :order="selectedOrder"
+            @close="showPaymentModal = false"
+            @updated="handlePaymentUpdated" />
+
+        <!-- Filter Drawer -->
+        <div class="drawer drawer-end">
+            <input id="orders-filter-drawer" type="checkbox" class="drawer-toggle" />
+            <div class="drawer-side z-50">
+                <label for="orders-filter-drawer" aria-label="close sidebar" class="drawer-overlay" />
+                <div class="bg-base-100 text-base-content h-full w-80 sm:w-96 flex flex-col">
+                    <!-- Drawer Header -->
+                    <div class="bg-base-200 flex justify-between px-5 py-4">
+                        <p class="text-lg font-medium">Filters</p>
+                        <label
+                            for="orders-filter-drawer"
+                            aria-label="close sidebar"
+                            class="btn btn-ghost btn-sm btn-circle">
+                            <span class="iconify lucide--x size-5" />
+                        </label>
+                    </div>
+
+                    <!-- Drawer Content (Scrollable) -->
+                    <div class="flex-1 overflow-y-auto p-5 space-y-6">
+                        <!-- Payment Method -->
+                        <div>
+                            <p class="font-medium mb-3">Payment Method</p>
+                            <select v-model="selectedPaymentMethod" class="select select-bordered w-full">
+                                <option value="all">All Methods</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="midtrans">Midtrans</option>
+                            </select>
+                        </div>
+
+                        <!-- Courier -->
+                        <div>
+                            <p class="font-medium mb-3">Courier</p>
+                            <select v-model="selectedCourier" class="select select-bordered w-full">
+                                <option value="all">All Couriers</option>
+                                <option value="JNE">JNE</option>
+                                <option value="J&T">J&T</option>
+                                <option value="SiCepat">SiCepat</option>
+                                <option value="AnterAja">AnterAja</option>
+                            </select>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div>
+                            <p class="font-medium mb-3">Date</p>
+                            <!-- Quick Date Buttons -->
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                <button
+                                    @click="setDateRange('today')"
+                                    :class="[
+                                        'btn btn-sm',
+                                        isDateRangeActive('today') ? 'btn-primary' : 'btn-outline',
+                                    ]">
+                                    Today
+                                </button>
+                                <button
+                                    @click="setDateRange('yesterday')"
+                                    :class="[
+                                        'btn btn-sm',
+                                        isDateRangeActive('yesterday') ? 'btn-primary' : 'btn-outline',
+                                    ]">
+                                    Yesterday
+                                </button>
+                                <button
+                                    @click="setDateRange('this-week')"
+                                    class="btn btn-sm btn-outline">
+                                    This Week
+                                </button>
+                                <button
+                                    @click="setDateRange('this-month')"
+                                    class="btn btn-sm btn-outline">
+                                    This Month
+                                </button>
+                                <button
+                                    @click="setDateRange('last-month')"
+                                    class="btn btn-sm btn-outline">
+                                    Last Month
+                                </button>
+                                <button
+                                    @click="setDateRange('last-3-months')"
+                                    class="btn btn-sm btn-outline">
+                                    Last 3 Months
+                                </button>
+                                <button
+                                    @click="setDateRange('last-6-months')"
+                                    class="btn btn-sm btn-outline">
+                                    Last 6 Months
+                                </button>
+                                <button
+                                    @click="setDateRange('this-year')"
+                                    class="btn btn-sm btn-outline">
+                                    This Year
+                                </button>
+                            </div>
+
+                            <!-- Custom Date Inputs -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="form-control">
+                                    <label class="input input-bordered input-sm flex items-center gap-2">
+                                        <input v-model="dateFrom" type="date" class="grow" placeholder="Date" />
+                                        <span class="iconify lucide--calendar size-4 text-base-content/60" />
+                                    </label>
+                                </div>
+                                <div class="form-control">
+                                    <label class="input input-bordered input-sm flex items-center gap-2">
+                                        <input v-model="dateTo" type="date" class="grow" placeholder="Date" />
+                                        <span class="iconify lucide--calendar size-4 text-base-content/60" />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Range -->
+                        <div>
+                            <p class="font-medium mb-3">Total Amount Range</p>
+                            <div class="space-y-3">
+                                <div class="form-control">
+                                    <label class="label py-1">
+                                        <span class="label-text text-sm">Minimum</span>
+                                    </label>
+                                    <input
+                                        v-model="minTotal"
+                                        type="number"
+                                        placeholder="e.g. 100000"
+                                        class="input input-bordered" />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label py-1">
+                                        <span class="label-text text-sm">Maximum</span>
+                                    </label>
+                                    <input
+                                        v-model="maxTotal"
+                                        type="number"
+                                        placeholder="e.g. 5000000"
+                                        class="input input-bordered" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drawer Footer -->
+                    <div class="sticky bottom-0 bg-base-100 border-t border-base-300 p-5">
+                        <div class="flex gap-3">
+                            <button @click="clearFilters" class="btn btn-outline flex-1">
+                                <span class="iconify lucide--rotate-ccw size-4" />
+                                Reset
+                            </button>
+                            <label for="orders-filter-drawer" class="btn btn-primary flex-1">
+                                <span class="iconify lucide--filter size-4" />
+                                Apply
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
