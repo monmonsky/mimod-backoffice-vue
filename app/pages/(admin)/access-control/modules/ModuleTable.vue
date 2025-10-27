@@ -7,6 +7,9 @@ import { getErrorMessage } from "~/utils/errorHandlers";
 const { updateModulesOrder } = useModules();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate } = usePermissionCheck();
+
 const searchQuery = ref("");
 const activeFilter = ref<boolean | "">("");
 const visibleFilter = ref<boolean | "">("");
@@ -307,6 +310,7 @@ const cancelChanges = () => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('modules')"
                             to="/access-control/modules/create"
                             aria-label="Create module link"
                             class="btn btn-primary btn-sm max-sm:btn-square">

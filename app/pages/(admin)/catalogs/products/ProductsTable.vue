@@ -6,6 +6,9 @@ import ProductsFilterDrawer from "./components/ProductsFilterDrawer.vue";
 const { deleteProduct } = useProducts();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canUpdate, canDelete, canShow } = usePermissionCheck();
+
 // Delete confirmation composable
 const {
     confirmDelete,
@@ -162,6 +165,7 @@ const getDisplayUrl = (media: any) => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('products')"
                             to="/catalogs/products/create"
                             aria-label="Create product link"
                             class="btn btn-primary btn-sm max-sm:btn-square">
@@ -273,13 +277,15 @@ const getDisplayUrl = (media: any) => {
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
                                         <NuxtLink
+                                            v-if="canUpdate('products')"
                                             :to="`/catalogs/products/${product.id}/edit`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="Edit">
                                             <span class="iconify lucide--pencil size-4" />
                                         </NuxtLink>
                                         <button
-                                            @click="openDeleteModal(product)"
+                                            v-if="canDelete('products')"
+                                            @click="openDeleteModal(product.id)"
                                             class="btn btn-ghost btn-xs text-error"
                                             aria-label="Delete">
                                             <span class="iconify lucide--trash-2 size-4" />

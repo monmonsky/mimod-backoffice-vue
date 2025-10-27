@@ -5,6 +5,10 @@ definePageMeta({
     layout: "admin",
 });
 
+// Set page title from admin menu (use parent path /access-control/roles)
+const { setPageTitleFromMenu } = useAdminMenu();
+setPageTitleFromMenu('/access-control/roles');
+
 const router = useRouter();
 
 const { createRole } = useRoles();

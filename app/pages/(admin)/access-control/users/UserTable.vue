@@ -6,6 +6,9 @@ import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers"
 const { getUsers } = useUsers();
 const { getRoles } = useRoles();
 
+// Permission checks
+const { canCreate } = usePermissionCheck();
+
 // Fetch roles for filter dropdown
 const { data: rolesResponse } = getRoles();
 const roles = computed(() => {
@@ -110,6 +113,7 @@ const handleRefresh = () => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('users')"
                             to="/access-control/users/create"
                             aria-label="Create user link"
                             class="btn btn-primary btn-sm max-sm:btn-square">

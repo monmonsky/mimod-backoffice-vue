@@ -9,6 +9,16 @@ interface Module {
     group_name: string | null;
     is_visible: boolean;
     is_active: boolean;
+    children?: Module[];
+}
+
+export interface Permission {
+    id: number;
+    name: string;
+    display_name: string;
+    action: string;
+    module: string;
+    is_active: boolean;
 }
 
 interface Role {
@@ -29,6 +39,7 @@ interface User {
     role_name?: string;
     role_display_name?: string;
     role?: Role;
+    permissions?: Permission[];
 }
 
 export const useAuthStore = defineStore("auth", () => {
@@ -55,6 +66,18 @@ export const useAuthStore = defineStore("auth", () => {
     const isTokenExpired = computed(() => {
         if (!tokenExpiry.value) return false;
         return Date.now() >= tokenExpiry.value;
+    });
+
+    // Get user permissions
+    const userPermissions = computed(() => {
+        return user.value?.permissions || [];
+    });
+
+    // Get active permission names only
+    const userPermissionNames = computed(() => {
+        return userPermissions.value
+            .filter(p => p.is_active)
+            .map(p => p.name);
     });
 
     const setToken = (newToken: string, expiresIn?: number) => {
@@ -122,6 +145,8 @@ export const useAuthStore = defineStore("auth", () => {
         tokenExpiry,
         isAuthenticated,
         isTokenExpired,
+        userPermissions,
+        userPermissionNames,
         setToken,
         setUser,
         setTokenExpiry,

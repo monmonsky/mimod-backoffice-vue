@@ -4,6 +4,9 @@ import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers"
 
 const { getRoles } = useRoles();
 
+// Permission checks
+const { canCreate } = usePermissionCheck();
+
 const searchQuery = ref("");
 const statusFilter = ref<boolean | "">("");
 const typeFilter = ref<boolean | "">("");
@@ -90,6 +93,7 @@ const goToPage = (page: number) => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('roles')"
                             to="/access-control/roles/create"
                             aria-label="Create role link"
                             class="btn btn-primary btn-sm max-sm:btn-square">

@@ -6,6 +6,9 @@ import { getCouponStatusBadgeClass } from "~/utils/statusHelpers";
 const { deleteCoupon } = useCoupons();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canUpdate, canDelete, canShow } = usePermissionCheck();
+
 // Delete confirmation composable
 const {
     confirmDelete,
@@ -142,6 +145,7 @@ const isExpired = (endDate: string) => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('coupons')"
                             to="/marketing/coupons/create"
                             aria-label="Create coupon link"
                             class="btn btn-primary btn-sm max-sm:btn-square">
@@ -239,13 +243,22 @@ const isExpired = (endDate: string) => {
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
-                                        <NuxtLink :href="`/marketing/coupons/${coupon.id}/show`" class="btn btn-ghost btn-xs">
+                                        <NuxtLink
+                                            v-if="canShow('coupons')"
+                                            :href="`/marketing/coupons/${coupon.id}/show`"
+                                            class="btn btn-ghost btn-xs">
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
-                                        <NuxtLink :href="`/marketing/coupons/${coupon.id}/edit`" class="btn btn-ghost btn-xs">
+                                        <NuxtLink
+                                            v-if="canUpdate('coupons')"
+                                            :href="`/marketing/coupons/${coupon.id}/edit`"
+                                            class="btn btn-ghost btn-xs">
                                             <span class="iconify lucide--pencil size-4" />
                                         </NuxtLink>
-                                        <button @click="openDeleteModal(coupon.id)" class="btn btn-ghost btn-xs text-error">
+                                        <button
+                                            v-if="canDelete('coupons')"
+                                            @click="openDeleteModal(coupon.id)"
+                                            class="btn btn-ghost btn-xs text-error">
                                             <span class="iconify lucide--trash-2 size-4" />
                                         </button>
                                     </div>

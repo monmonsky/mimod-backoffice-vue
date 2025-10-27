@@ -14,7 +14,7 @@ export const useAISeo = () => {
 
     interface GenerateSeoResponse {
         status: boolean;
-        statusCode: number;
+        statusCode: string;  // Backend returns string: "200", "400", etc.
         message: string;
         data: {
             title: string;

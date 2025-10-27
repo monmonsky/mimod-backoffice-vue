@@ -1,6 +1,7 @@
 import type { ISidebarMenuItem } from "./SidebarMenuItem.vue";
 
 const findItem = (menuItems: ISidebarMenuItem[], url: string): ISidebarMenuItem | null => {
+    // First try exact match
     for (const item of menuItems) {
         if (item.url == url) {
             return item;
@@ -12,6 +13,20 @@ const findItem = (menuItems: ISidebarMenuItem[], url: string): ISidebarMenuItem 
             }
         }
     }
+
+    // If no exact match, try startsWith match for child pages (e.g., /roles/create matches /roles)
+    for (const item of menuItems) {
+        if (item.url && url.startsWith(item.url + '/')) {
+            return item;
+        }
+        if (item.children) {
+            const fItem = findItem(item.children, url);
+            if (fItem) {
+                return fItem;
+            }
+        }
+    }
+
     return null;
 };
 

@@ -5,14 +5,43 @@ export const useMenuAccess = () => {
     const authStore = useAuthStore();
 
     /**
-     * Get user's accessible module routes from role
+     * Get user's accessible module routes from role (including nested children)
      */
     const userModuleRoutes = computed(() => {
         const modules = authStore.user?.role?.modules || [];
-        return modules
-            .filter((m) => m.is_visible && m.is_active)
-            .map((m) => m.route)
-            .filter((route): route is string => route !== null);
+
+        // Debug: Log user modules
+        if (import.meta.client) {
+            console.log('[Menu Access] User role:', authStore.user?.role?.name);
+            console.log('[Menu Access] User modules:', modules);
+        }
+
+        const routes: string[] = [];
+
+        // Recursive function to extract all routes including children
+        const extractRoutes = (moduleList: any[]) => {
+            for (const module of moduleList) {
+                if (module.is_visible && module.is_active) {
+                    // Add parent route if exists
+                    if (module.route) {
+                        routes.push(module.route);
+                    }
+
+                    // Recursively add children routes
+                    if (module.children && module.children.length > 0) {
+                        extractRoutes(module.children);
+                    }
+                }
+            }
+        };
+
+        extractRoutes(modules);
+
+        if (import.meta.client) {
+            console.log('[Menu Access] Accessible routes (including children):', routes);
+        }
+
+        return routes;
     });
 
     /**
@@ -34,7 +63,19 @@ export const useMenuAccess = () => {
             return true;
         }
 
-        return userModuleRoutes.value.includes(route);
+        // Check direct route access (includes all nested children routes)
+        const hasAccess = userModuleRoutes.value.includes(route);
+
+        // Debug: Log access check
+        if (import.meta.client) {
+            if (hasAccess) {
+                console.log(`[Menu Access] ✅ Access granted: ${route}`);
+            } else {
+                console.log(`[Menu Access] ❌ No access to route: ${route}`);
+            }
+        }
+
+        return hasAccess;
     };
 
     /**

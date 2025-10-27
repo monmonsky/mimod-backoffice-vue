@@ -15,6 +15,9 @@ setPageTitleFromMenu();
 const { getTokens, getTokenStats, revokeToken } = useStoreTokens();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canDelete } = usePermissionCheck();
+
 const { data: statsResponse, pending: loadingStats, refresh: refreshStats } = await getTokenStats();
 const stats = computed(() => extractNestedValue(statsResponse.value, "data", {}));
 
@@ -81,7 +84,10 @@ const formatDate = (date: string | null) => {
                 <h1 class="text-2xl font-bold">Store API Tokens</h1>
                 <p class="text-base-content/60 mt-1 text-sm">Manage API tokens for store frontend access</p>
             </div>
-            <button class="btn btn-primary gap-2" @click="showGenerateModal = true">
+            <button
+                v-if="canCreate('store-tokens')"
+                class="btn btn-primary gap-2"
+                @click="showGenerateModal = true">
                 <span class="iconify lucide--plus size-4" />
                 Generate Token
             </button>
@@ -215,6 +221,7 @@ const formatDate = (date: string | null) => {
                                 <td>
                                     <div class="flex justify-end gap-2">
                                         <button
+                                            v-if="canDelete('store-tokens')"
                                             class="btn btn-ghost btn-sm"
                                             :disabled="deletingId === token.id"
                                             @click="handleRevokeToken(token.id, token.name)">

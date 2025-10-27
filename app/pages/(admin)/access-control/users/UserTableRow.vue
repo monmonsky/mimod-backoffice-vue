@@ -12,6 +12,9 @@ const { deleteUser } = useUsers();
 const { success, error } = useToast();
 const deletingUser = ref(false);
 
+// Permission checks
+const { canUpdate, canDelete, canShow } = usePermissionCheck();
+
 const openDeleteDialog = () => {
     const dialog = document.querySelector<HTMLDialogElement>(`#delete-user-${props.id}`);
     dialog?.showModal();
@@ -66,18 +69,21 @@ const handleDelete = async () => {
         <td>
             <div class="inline-flex w-fit">
                 <NuxtLink
+                    v-if="canShow('users')"
                     aria-label="View user"
                     class="btn btn-square btn-ghost btn-sm"
                     :href="`/access-control/users/${id}/show`">
                     <span class="iconify lucide--eye text-base-content/80 size-4" />
                 </NuxtLink>
                 <NuxtLink
+                    v-if="canUpdate('users')"
                     aria-label="Edit user link"
                     class="btn btn-square btn-ghost btn-sm"
                     :href="`/access-control/users/${id}/edit`">
                     <span class="iconify lucide--pencil text-base-content/80 size-4" />
                 </NuxtLink>
                 <button
+                    v-if="canDelete('users')"
                     aria-label="Delete user"
                     class="btn btn-square btn-error btn-outline btn-sm border-transparent"
                     @click="openDeleteDialog">

@@ -6,6 +6,9 @@ import { getActiveBadgeClass } from "~/utils/statusHelpers";
 const { deleteCategory } = useCategories();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canUpdate, canDelete, canShow } = usePermissionCheck();
+
 // Delete confirmation composable
 const {
     confirmDelete,
@@ -104,7 +107,11 @@ const openDeleteModal = (category: any) => {
                         </div>
                     </div>
                     <div class="inline-flex items-center gap-3">
-                        <NuxtLink to="/catalogs/categories/create" aria-label="Create category link" class="btn btn-primary btn-sm max-sm:btn-square">
+                        <NuxtLink
+                            v-if="canCreate('categories')"
+                            to="/catalogs/categories/create"
+                            aria-label="Create category link"
+                            class="btn btn-primary btn-sm max-sm:btn-square">
                             <span class="iconify lucide--plus size-4" />
                             <span class="hidden sm:inline">New Category</span>
                         </NuxtLink>
@@ -186,13 +193,22 @@ const openDeleteModal = (category: any) => {
                                 </td>
                                 <td>
                                     <div class="inline-flex">
-                                        <NuxtLink :href="`/catalogs/categories/${category.id}/show`" class="btn btn-ghost btn-sm btn-square">
+                                        <NuxtLink
+                                            v-if="canShow('categories')"
+                                            :href="`/catalogs/categories/${category.id}/show`"
+                                            class="btn btn-ghost btn-sm btn-square">
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
-                                        <NuxtLink :href="`/catalogs/categories/${category.id}/edit`" class="btn btn-ghost btn-sm btn-square">
+                                        <NuxtLink
+                                            v-if="canUpdate('categories')"
+                                            :href="`/catalogs/categories/${category.id}/edit`"
+                                            class="btn btn-ghost btn-sm btn-square">
                                             <span class="iconify lucide--pencil size-4" />
                                         </NuxtLink>
-                                        <button class="btn btn-ghost btn-sm btn-square text-error" @click="openDeleteModal(category)">
+                                        <button
+                                            v-if="canDelete('categories')"
+                                            class="btn btn-ghost btn-sm btn-square text-error"
+                                            @click="openDeleteModal(category)">
                                             <span class="iconify lucide--trash-2 size-4" />
                                         </button>
                                     </div>

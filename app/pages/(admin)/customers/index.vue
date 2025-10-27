@@ -9,13 +9,19 @@ definePageMeta({
 // Set page title from admin menu
 const { setPageTitleFromMenu } = useAdminMenu();
 setPageTitleFromMenu();
+
+// Permission checks
+const { canCreate } = usePermissionCheck();
 </script>
 
 <template>
     <div>
         <PageTitle :title="'Customers'" :items="[{ label: 'Customers', active: true }]">
             <template #actions>
-                <NuxtLink class="btn btn-primary btn-sm" href="/customers/create">
+                <NuxtLink
+                    v-if="canCreate('customers')"
+                    class="btn btn-primary btn-sm"
+                    href="/customers/create">
                     <span class="iconify lucide--plus size-4" />
                     Add Customer
                 </NuxtLink>

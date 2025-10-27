@@ -19,7 +19,10 @@ const emit = defineEmits<{
 const editor = useEditor({
     content: props.modelValue,
     extensions: [
-        StarterKit,
+        StarterKit.configure({
+            // Disable bold & italic from StarterKit to avoid conflicts
+            // We'll use the individual extensions instead
+        }),
         Underline,
         Link.configure({
             openOnClick: false,

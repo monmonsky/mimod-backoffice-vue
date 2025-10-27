@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { getShippingProviderBadgeClass } from "~/utils/badgeHelpers";
 
+// Permission checks
+const { canUpdate, canShow } = usePermissionCheck();
+
 // Filters
 const search = ref("");
 const page = ref(1);
@@ -327,12 +330,14 @@ const testConnection = async (configId: number) => {
                                             <span v-else class="iconify lucide--plug-zap size-4" />
                                         </button>
                                         <NuxtLink
+                                            v-if="canShow('shipping-configs')"
                                             :to="`/settings/shipping-configs/${config.id}/show`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="View">
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
                                         <NuxtLink
+                                            v-if="canUpdate('shipping-configs')"
                                             :to="`/settings/shipping-configs/${config.id}/edit`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="Edit">

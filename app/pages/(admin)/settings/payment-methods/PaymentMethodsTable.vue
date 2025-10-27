@@ -6,6 +6,9 @@ import PaymentMethodsFilterDrawer from "./components/PaymentMethodsFilterDrawer.
 const { deletePaymentMethod } = usePaymentMethods();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canUpdate, canDelete, canShow } = usePermissionCheck();
+
 // Store the payment method object for displaying in modal
 const selectedMethod = ref<any>(null);
 
@@ -145,6 +148,7 @@ watch([isActive, type, provider, per_page], () => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('payment-methods')"
                             to="/settings/payment-methods/create"
                             aria-label="Create payment method"
                             class="btn btn-primary btn-sm max-sm:btn-square">
@@ -231,18 +235,21 @@ watch([isActive, type, provider, per_page], () => {
                                 <td>
                                     <div class="flex justify-end gap-2">
                                         <NuxtLink
+                                            v-if="canShow('payment-methods')"
                                             :to="`/settings/payment-methods/${method.id}/show`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="View">
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
                                         <NuxtLink
+                                            v-if="canUpdate('payment-methods')"
                                             :to="`/settings/payment-methods/${method.id}/edit`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="Edit">
                                             <span class="iconify lucide--pencil size-4" />
                                         </NuxtLink>
                                         <button
+                                            v-if="canDelete('payment-methods')"
                                             @click="openDeleteModal(method)"
                                             class="btn btn-ghost btn-xs text-error"
                                             aria-label="Delete">

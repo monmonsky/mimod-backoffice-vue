@@ -4,6 +4,9 @@ import { getActiveBadgeClass } from "~/utils/statusHelpers";
 
 defineProps<Role>();
 
+// Permission checks
+const { canUpdate, canDelete, canShow } = usePermissionCheck();
+
 const openDeleteDialog = () => {
     const dialog = document.querySelector<HTMLDialogElement>("#access-control-role-delete");
     dialog?.showModal();
@@ -38,18 +41,21 @@ const openDeleteDialog = () => {
         <td>
             <div class="inline-flex w-fit">
                 <NuxtLink
+                    v-if="canShow('roles')"
                     aria-label="View role"
                     class="btn btn-square btn-ghost btn-sm"
                     :href="`/access-control/roles/${id}/show`">
                     <span class="iconify lucide--eye text-base-content/80 size-4" />
                 </NuxtLink>
                 <NuxtLink
+                    v-if="canUpdate('roles')"
                     aria-label="Edit role link"
                     class="btn btn-square btn-ghost btn-sm"
                     :href="`/access-control/roles/${id}/edit`">
                     <span class="iconify lucide--pencil text-base-content/80 size-4" />
                 </NuxtLink>
                 <button
+                    v-if="canDelete('roles')"
                     aria-label="Delete role"
                     class="btn btn-square btn-error btn-outline btn-sm border-transparent"
                     :disabled="is_system"

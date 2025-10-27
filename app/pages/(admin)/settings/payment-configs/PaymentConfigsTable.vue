@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { getPaymentProviderBadgeClass } from "~/utils/badgeHelpers";
 
+// Permission checks
+const { canUpdate, canShow } = usePermissionCheck();
+
 // Filters
 const search = ref("");
 const page = ref(1);
@@ -151,12 +154,14 @@ watch([per_page], () => {
                                 <td>
                                     <div class="flex justify-end gap-2">
                                         <NuxtLink
+                                            v-if="canShow('payment-configs')"
                                             :to="`/settings/payment-configs/${config.id}/show`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="View">
                                             <span class="iconify lucide--eye size-4" />
                                         </NuxtLink>
                                         <NuxtLink
+                                            v-if="canUpdate('payment-configs')"
                                             :to="`/settings/payment-configs/${config.id}/edit`"
                                             class="btn btn-ghost btn-xs"
                                             aria-label="Edit">

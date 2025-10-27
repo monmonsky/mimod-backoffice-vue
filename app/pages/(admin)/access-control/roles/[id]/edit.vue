@@ -319,7 +319,10 @@ const handleSubmit = async () => {
                         <span class="iconify lucide--x size-4" />
                         Cancel
                     </NuxtLink>
-                    <button type="submit" class="btn btn-sm btn-primary" :disabled="saving || role.is_system">
+                    <button
+                        type="submit"
+                        class="btn btn-sm btn-primary"
+                        :disabled="saving || (role.is_system && !isSuperAdmin)">
                         <span v-if="!saving" class="iconify lucide--save size-4" />
                         <span v-else class="loading loading-spinner loading-sm"></span>
                         {{ saving ? "Saving..." : "Save Changes" }}

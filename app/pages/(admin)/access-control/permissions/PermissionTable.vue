@@ -6,6 +6,9 @@ import { extractListData, extractPaginationMeta } from "~/utils/responseHelpers"
 const { getPermissions } = usePermissions();
 const { getModules } = useModules();
 
+// Permission checks
+const { canCreate } = usePermissionCheck();
+
 // Fetch modules for filter dropdown
 const { data: modulesResponse } = getModules();
 const modules = computed(() => {

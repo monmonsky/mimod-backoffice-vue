@@ -5,6 +5,9 @@ import { getErrorMessage } from "~/utils/errorHandlers";
 const { deleteCustomer } = useCustomers();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canUpdate, canDelete, canShow } = usePermissionCheck();
+
 // Delete confirmation composable
 const {
     confirmDelete,
@@ -149,13 +152,22 @@ watch(status, () => {
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <NuxtLink :href="`/customers/${customer.id}/show`" class="btn btn-ghost btn-xs">
+                                    <NuxtLink
+                                        v-if="canShow('customers')"
+                                        :href="`/customers/${customer.id}/show`"
+                                        class="btn btn-ghost btn-xs">
                                         <span class="iconify lucide--eye size-4" />
                                     </NuxtLink>
-                                    <NuxtLink :href="`/customers/${customer.id}/edit`" class="btn btn-ghost btn-xs">
+                                    <NuxtLink
+                                        v-if="canUpdate('customers')"
+                                        :href="`/customers/${customer.id}/edit`"
+                                        class="btn btn-ghost btn-xs">
                                         <span class="iconify lucide--pencil size-4" />
                                     </NuxtLink>
-                                    <!-- <button @click="openDeleteModal(customer.id)" class="btn btn-ghost btn-xs text-error">
+                                    <!-- <button
+                                        v-if="canDelete('customers')"
+                                        @click="openDeleteModal(customer.id)"
+                                        class="btn btn-ghost btn-xs text-error">
                                         <span class="iconify lucide--trash-2 size-4" />
                                     </button> -->
                                 </div>

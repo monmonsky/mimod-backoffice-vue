@@ -717,8 +717,9 @@ const formatPrice = (price: string | number) => {
                             <select
                                 id="size"
                                 v-model="form.size"
+                                name="size"
                                 class="select select-sm w-full"
-                                required
+                                :required="showModal"
                             >
                                 <option value="" disabled>Select size</option>
                                 <option
@@ -737,8 +738,9 @@ const formatPrice = (price: string | number) => {
                             <select
                                 id="color"
                                 v-model="form.color"
+                                name="color"
                                 class="select select-sm w-full"
-                                required
+                                :required="showModal"
                             >
                                 <option value="" disabled>Select color</option>
                                 <option

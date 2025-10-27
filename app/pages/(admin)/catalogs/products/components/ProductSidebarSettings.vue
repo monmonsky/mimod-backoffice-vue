@@ -194,15 +194,9 @@ const handleTagKeydown = (event: KeyboardEvent) => {
                             @change="emit('update:status', ($event.target as HTMLSelectElement).value)"
                             class="select select-sm w-full"
                         >
-                            <option value="active">
-                                <span class="text-success">●</span> Active
-                            </option>
-                            <option value="inactive">
-                                <span class="text-warning">●</span> Inactive
-                            </option>
-                            <option value="draft">
-                                <span class="text-base-content/60">●</span> Draft
-                            </option>
+                            <option value="active">● Active</option>
+                            <option value="inactive">● Inactive</option>
+                            <option value="draft">● Draft</option>
                         </select>
                     </div>
                     <div class="form-control">

@@ -20,6 +20,9 @@ const props = defineProps<{
 const { sendInvoiceEmail } = useOrders();
 const { success, error: showError } = useToast();
 
+// Permission checks
+const { canCreate, canUpdate, canDoAction } = usePermissionCheck();
+
 // Initialize filters with props.initialFilters if provided
 const selectedStatus = ref(props.initialFilters?.status || "all");
 const selectedPaymentStatus = ref(props.initialFilters?.payment_status || "all");
@@ -195,11 +198,11 @@ const canUpdatePayment = (order: any) => {
 const getAvailableActions = (order: any) => {
     const actions = [];
 
-    if (canUpdateStatus(order)) {
+    if (canUpdateStatus(order) && canDoAction('orders', 'update-status')) {
         actions.push({ id: "status", label: "Update Status", icon: "lucide--package" });
     }
 
-    if (canUpdatePayment(order)) {
+    if (canUpdatePayment(order) && canUpdate('orders')) {
         actions.push({ id: "payment", label: "Update Payment", icon: "lucide--credit-card" });
     }
 
@@ -264,6 +267,7 @@ const handleAction = (action: string, order: any) => {
                     </div>
                     <div class="inline-flex items-center gap-3">
                         <NuxtLink
+                            v-if="canCreate('orders')"
                             to="/orders/create"
                             aria-label="Create order link"
                             class="btn btn-primary btn-sm max-sm:btn-square">
