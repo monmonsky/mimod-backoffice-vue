@@ -17,7 +17,7 @@ export default defineNuxtConfig({
         appManifest: false,
     },
     compatibilityDate: "2025-05-05",
-    devtools: { enabled: false },
+    devtools: { enabled: true },
     modules: ["@pinia/nuxt"],
     typescript: {
         typeCheck: false,

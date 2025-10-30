@@ -44,20 +44,45 @@ interface User {
 
 export const useAuthStore = defineStore("auth", () => {
     const config = useRuntimeConfig();
-    const token = useCookie<string | null>("auth_token", {
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        default: () => null, // Don't use env token as default
-    });
 
-    const user = useCookie<User | null>("auth_user", {
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        default: () => null,
-    });
+    // Use refs with localStorage persistence for SPA mode
+    const token = ref<string | null>(null);
+    const user = ref<User | null>(null);
+    const tokenExpiry = ref<number | null>(null);
 
-    const tokenExpiry = useCookie<number | null>("auth_token_expiry", {
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        default: () => null,
-    });
+    // Initialize from localStorage on client-side
+    if (import.meta.client) {
+        token.value = localStorage.getItem('auth_token');
+        const storedUser = localStorage.getItem('auth_user');
+        user.value = storedUser ? JSON.parse(storedUser) : null;
+        const storedExpiry = localStorage.getItem('auth_token_expiry');
+        tokenExpiry.value = storedExpiry ? parseInt(storedExpiry) : null;
+
+        // Watch for changes and sync to localStorage
+        watch(token, (newToken) => {
+            if (newToken) {
+                localStorage.setItem('auth_token', newToken);
+            } else {
+                localStorage.removeItem('auth_token');
+            }
+        });
+
+        watch(user, (newUser) => {
+            if (newUser) {
+                localStorage.setItem('auth_user', JSON.stringify(newUser));
+            } else {
+                localStorage.removeItem('auth_user');
+            }
+        });
+
+        watch(tokenExpiry, (newExpiry) => {
+            if (newExpiry) {
+                localStorage.setItem('auth_token_expiry', newExpiry.toString());
+            } else {
+                localStorage.removeItem('auth_token_expiry');
+            }
+        });
+    }
 
     // User is authenticated if both token AND user exist
     const isAuthenticated = computed(() => !!token.value && !!user.value);
